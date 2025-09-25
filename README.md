@@ -1,2 +1,2 @@
 # mizuna
-Diet and behaviour tracking for kids, that's actually fun to use
+Track and analyse your kids' diet and behaviour

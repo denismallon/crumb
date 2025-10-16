@@ -100,7 +100,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       <ExpoStatusBar style="auto" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>🍎 Food Allergy Tracker</Text>
+        <Text style={styles.title}>🍞 Crumb: Food Allergy Tracker</Text>
         <Text style={styles.subtitle}>Manage Your Notes</Text>
       </View>
 

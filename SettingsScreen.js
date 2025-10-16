@@ -72,7 +72,7 @@ export default function SettingsScreen({ onClose }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Information</Text>
           <Text style={styles.infoText}>Version: 1.0.0</Text>
-          <Text style={styles.infoText}>About: Mizuna helps track foods and reactions.</Text>
+          <Text style={styles.infoText}>About: Crumb helps track foods and reactions.</Text>
         </View>
 
         <View style={styles.section}>

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Mizuna",
-    "slug": "mizuna",
+    "name": "Crumb",
+    "slug": "crumb-food-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,7 +20,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.mizuna.app",
+      "package": "com.crumb.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

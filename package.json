@@ -1,6 +1,7 @@
 {
-  "name": "mizuna",
+  "name": "crumb",
   "version": "1.0.0",
+  "description": "Crumb Health Ltd - Food allergy and diet tracking app",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -10,16 +11,16 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~54.0.10",
+    "expo": "54.0.13",
     "expo-av": "~16.0.7",
     "expo-constants": "~18.0.9",
-    "expo-dev-client": "~6.0.12",
+    "expo-dev-client": "~6.0.15",
     "expo-keep-awake": "~15.0.7",
     "expo-status-bar": "~3.0.8",
     "express": "^5.1.0",
     "multer": "^2.0.2",
-    "react": "18.2.0",
-    "react-native": "0.76.5"
+    "react": "19.1.0",
+    "react-native": "0.81.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

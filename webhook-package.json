@@ -1,7 +1,7 @@
 {
   "name": "webhook-server",
   "version": "1.0.0",
-  "description": "Simple webhook server for Mizuna",
+  "description": "Simple webhook server for Crumb",
   "main": "webhook-server.js",
   "scripts": {
     "start": "node webhook-server.js"

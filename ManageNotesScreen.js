@@ -22,6 +22,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editingEntry, setEditingEntry] = useState(null);
   const [editedFoods, setEditedFoods] = useState([]);
   const [editedReactions, setEditedReactions] = useState([]);
+  const [processingNotes, setProcessingNotes] = useState([]);
 
   useEffect(() => {
     loadSavedEntries();
@@ -35,6 +36,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     try {
       const currentEntries = await StorageService.getFoodLogs();
       setSavedEntries(currentEntries);
+      
+      // Get processing notes
+      const processing = currentEntries.filter(entry => entry.processingStatus === 'processing');
+      setProcessingNotes(processing);
     } catch (error) {
       console.error('Error refreshing entries:', error);
     }
@@ -45,6 +50,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       setIsLoading(true);
       const entries = await StorageService.getFoodLogs();
       setSavedEntries(entries);
+      
+      // Get processing notes
+      const processing = entries.filter(entry => entry.processingStatus === 'processing');
+      setProcessingNotes(processing);
     } catch (error) {
       Alert.alert('Error', 'Failed to load saved entries.');
     } finally {
@@ -100,16 +109,17 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       <ExpoStatusBar style="auto" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>🍞 Crumb: Food Allergy Tracker</Text>
-        <Text style={styles.subtitle}>Manage Your Notes</Text>
+        <Text style={styles.title}>How are they doing?</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <View style={styles.content}>
         {/* Simplified homepage: no notifications, no inline data management, FABs below */}
 
         {/* Notes List */}
         <View style={styles.notesSection}>
-          <Text style={styles.sectionTitle}>Your Notes ({savedEntries.length}):</Text>
+          {savedEntries.length > 0 && (
+            <Text style={styles.sectionTitle}>You have {savedEntries.length} notes</Text>
+          )}
           
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -123,25 +133,33 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
               <Text style={styles.emptySubtitle}>Tap the + button above to add your first note</Text>
             </View>
           ) : (
-            <ScrollView style={styles.entriesContainer} nestedScrollEnabled>
-              {savedEntries.map((entry) => (
-                <View key={entry.id} style={styles.entryCard}>
-                  <View style={styles.entryHeader}>
-                    <View style={styles.entryInfo}>
-                      <Text style={styles.entryDate}>
-                        {StorageService.formatDateForDisplay(entry.timestamp)} at {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                      </Text>
-                      <Text style={styles.entrySource}>{entry.source === 'voice' ? '🎤 Voice' : '✏️ Manual'}</Text>
+            <View style={styles.entriesContainer}>
+              {savedEntries.map((entry) => {
+                const isProcessing = entry.processingStatus === 'processing';
+                return (
+                  <View key={entry.id} style={styles.entryCard}>
+                    {isProcessing && (
+                      <View style={styles.processingIndicator}>
+                        <ActivityIndicator size="small" color="#007bff" />
+                        <Text style={styles.processingText}>Processing...</Text>
+                      </View>
+                    )}
+                    <View style={styles.entryHeader}>
+                      <View style={styles.entryInfo}>
+                        <Text style={styles.entryDate}>
+                          {StorageService.formatDateForDisplay(entry.timestamp)} at {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </Text>
+                        <Text style={styles.entrySource}>{entry.source === 'voice' ? '🎤 Voice' : '✏️ Manual'}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => openEditModal(entry)}
+                        disabled={isDeleting === entry.id || isProcessing}
+                        accessibilityLabel="Edit entry"
+                      >
+                        <Text style={styles.editButtonText}>✏️</Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => openEditModal(entry)}
-                      disabled={isDeleting === entry.id}
-                      accessibilityLabel="Edit entry"
-                    >
-                      <Text style={styles.editButtonText}>✏️</Text>
-                    </TouchableOpacity>
-                  </View>
                   
                   <Text style={styles.entryText}>{entry.text}</Text>
                   
@@ -171,28 +189,29 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                     </View>
                   )}
                   
-                  {/* Confidence and labels removed for simplicity */}
-                </View>
-              ))}
-            </ScrollView>
+                    {/* Confidence and labels removed for simplicity */}
+                  </View>
+                );
+              })}
+            </View>
           )}
         </View>
-      </ScrollView>
+      </View>
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer} pointerEvents="box-none">
-        <TouchableOpacity
-          style={styles.secondaryFab}
-          onPress={onOpenSettings}
-          accessibilityLabel="Open settings"
-        >
-          <Text style={styles.fabIcon}>⚙️</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.primaryFab}
           onPress={onAddNote}
           accessibilityLabel="Add new note"
         >
           <Text style={styles.fabIcon}>＋</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryFab}
+          onPress={onOpenSettings}
+          accessibilityLabel="Open settings"
+        >
+          <Text style={styles.settingsIcon}>⚙</Text>
         </TouchableOpacity>
       </View>
 
@@ -366,28 +385,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   header: {
-    paddingTop: 20,
+    paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2c3e50',
     textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6c757d',
-    textAlign: 'center',
-    marginTop: 5,
+    fontFamily: 'System',
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   addButton: {
     backgroundColor: '#28a745',
@@ -462,7 +477,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   entriesContainer: {
-    maxHeight: 400,
+    flex: 1,
     marginTop: 15,
   },
   entryCard: {
@@ -550,7 +565,7 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 80,
     alignItems: 'flex-end',
   },
   primaryFab: {
@@ -561,7 +576,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
-    marginTop: 12,
+    marginBottom: 12,
   },
   secondaryFab: {
     backgroundColor: '#e9ecef',
@@ -574,6 +589,10 @@ const styles = StyleSheet.create({
   },
   fabIcon: {
     fontSize: 22,
+  },
+  settingsIcon: {
+    fontSize: 18,
+    color: '#6c757d',
   },
   modalBackdrop: {
     flex: 1,
@@ -677,5 +696,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     textDecorationLine: 'underline',
+  },
+  processingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007bff',
+  },
+  processingText: {
+    fontSize: 12,
+    color: '#007bff',
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });

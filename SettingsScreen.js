@@ -56,8 +56,15 @@ export default function SettingsScreen({ onClose }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.closeButtonText}>✕</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
+        <View style={styles.placeholder} />
+      </View>
+      
+      <ScrollView contentContainerStyle={styles.content}>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data Management</Text>
@@ -80,9 +87,6 @@ export default function SettingsScreen({ onClose }) {
           <Text style={styles.infoText}>Notifications, child profiles, and more.</Text>
         </View>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={onClose} accessibilityLabel="Close settings">
-          <Text style={styles.secondaryButtonText}>Close</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -93,15 +97,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  content: {
-    padding: 20,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#dc3545',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#2c3e50',
-    textAlign: 'center',
-    marginBottom: 20,
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    padding: 20,
   },
   section: {
     backgroundColor: '#fff',

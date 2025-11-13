@@ -23,6 +23,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editedFoods, setEditedFoods] = useState([]);
   const [editedReactions, setEditedReactions] = useState([]);
   const [processingNotes, setProcessingNotes] = useState([]);
+  const [editItemModalVisible, setEditItemModalVisible] = useState(false);
+  const [editingItemType, setEditingItemType] = useState(null); // 'food' or 'reaction'
+  const [editingItemIndex, setEditingItemIndex] = useState(null);
+  const [editingItemData, setEditingItemData] = useState(null);
 
   useEffect(() => {
     loadSavedEntries();
@@ -104,6 +108,25 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     setEditModalVisible(true);
   };
 
+  const openEditItemModal = (type, index, data) => {
+    setEditingItemType(type);
+    setEditingItemIndex(index);
+    setEditingItemData(data);
+    setEditItemModalVisible(true);
+  };
+
+  const saveEditedItem = (updatedData) => {
+    if (editingItemType === 'food') {
+      setEditedFoods(prev => prev.map((item, i) => i === editingItemIndex ? updatedData : item));
+    } else if (editingItemType === 'reaction') {
+      setEditedReactions(prev => prev.map((item, i) => i === editingItemIndex ? updatedData : item));
+    }
+    setEditItemModalVisible(false);
+    setEditingItemType(null);
+    setEditingItemIndex(null);
+    setEditingItemData(null);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ExpoStatusBar style="auto" />
@@ -112,7 +135,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
         <Text style={styles.title}>How are they doing?</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content}>
         {/* Simplified homepage: no notifications, no inline data management, FABs below */}
 
         {/* Notes List */}
@@ -151,44 +174,44 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                         </Text>
                         <Text style={styles.entrySource}>{entry.source === 'voice' ? '🎤 Voice' : '✏️ Manual'}</Text>
                       </View>
-                      <TouchableOpacity
+                      <TouchableOpacity 
                         style={styles.editButton}
                         onPress={() => openEditModal(entry)}
                         disabled={isDeleting === entry.id || isProcessing}
                         accessibilityLabel="Edit entry"
                       >
-                        <Text style={styles.editButtonText}>✏️</Text>
+                        <Text style={styles.editButtonText}>✎</Text>
                       </TouchableOpacity>
                     </View>
-                  
-                  <Text style={styles.entryText}>{entry.text}</Text>
-                  
-                  {/* Diagnostics removed for simplicity */}
+                    
+                    <Text style={styles.entryText}>{entry.text}</Text>
+                    
+                    {/* Diagnostics removed for simplicity */}
 
-                  {/* Extracted Foods */}
-                  {entry.foods && entry.foods.length > 0 && (
-                    <View style={styles.extractedDataSection}>
-                      <Text style={styles.extractedDataTitle}>🍎 Foods:</Text>
-                      {entry.foods.map((food, index) => (
-                        <Text key={index} style={styles.extractedDataItem}>
-                          • {food.name} ({food.mealType}){food.quantity ? ` - ${food.quantity}` : ''}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                  
-                  {/* Extracted Reactions */}
-                  {entry.reactions && entry.reactions.length > 0 && (
-                    <View style={styles.extractedDataSection}>
-                      <Text style={styles.extractedDataTitle}>⚠️ Reactions:</Text>
-                      {entry.reactions.map((reaction, index) => (
-                        <Text key={index} style={styles.extractedDataItem}>
-                          • {reaction.description} ({reaction.type}){reaction.reactionDelayMinutes ? ` - ${reaction.reactionDelayMinutes}min delay` : ''}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                  
+                    {/* Extracted Foods */}
+                    {entry.foods && entry.foods.length > 0 && (
+                      <View style={styles.extractedDataSection}>
+                        <Text style={styles.extractedDataTitle}>🍎 Foods:</Text>
+                        {entry.foods.map((food, index) => (
+                          <Text key={index} style={styles.extractedDataItem}>
+                            • {food.name} ({food.mealType}){food.quantity ? ` - ${food.quantity}` : ''}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+                    
+                    {/* Extracted Reactions */}
+                    {entry.reactions && entry.reactions.length > 0 && (
+                      <View style={styles.extractedDataSection}>
+                        <Text style={styles.extractedDataTitle}>⚠️ Reactions:</Text>
+                        {entry.reactions.map((reaction, index) => (
+                          <Text key={index} style={styles.extractedDataItem}>
+                            • {reaction.description} ({reaction.type}){reaction.reactionDelayMinutes ? ` - ${reaction.reactionDelayMinutes}min delay` : ''}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+                    
                     {/* Confidence and labels removed for simplicity */}
                   </View>
                 );
@@ -196,7 +219,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
             </View>
           )}
         </View>
-      </View>
+      </ScrollView>
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer} pointerEvents="box-none">
         <TouchableOpacity
@@ -218,105 +241,96 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       {/* Edit Modal */}
       <Modal
         visible={editModalVisible}
-        transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Edit Food Log Entry</Text>
+        <SafeAreaView style={styles.editModalContainer}>
+          <View style={styles.editModalHeader}>
+            <TouchableOpacity style={styles.editModalCloseButton} onPress={() => setEditModalVisible(false)}>
+              <Text style={styles.editModalCloseButtonText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.editModalTitle}>Edit Food Log Entry</Text>
+            <View style={styles.editModalPlaceholder} />
+          </View>
+          
+          <ScrollView style={styles.editModalContent}>
             {editingEntry && (
-              <>
-                <Text style={styles.modalLabel}>Original Note</Text>
-                <Text style={styles.originalNote}>{editingEntry.text}</Text>
+              <View>
+                <Text style={styles.editModalLabel}>Original Note</Text>
+                <Text style={styles.editOriginalNote}>{editingEntry.text}</Text>
 
-                <Text style={styles.sectionHeader}>Foods</Text>
-                <View>
-                  {(editedFoods || []).map((food, index) => (
-                    <View key={`food-${index}`} style={styles.editRow}>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Name"
-                        value={food.name}
-                        onChangeText={(t) => setEditedFoods(prev => prev.map((f, i) => i === index ? { ...f, name: t } : f))}
-                        accessibilityLabel={`Food ${index + 1} name`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Meal Type"
-                        value={food.mealType}
-                        onChangeText={(t) => setEditedFoods(prev => prev.map((f, i) => i === index ? { ...f, mealType: t } : f))}
-                        accessibilityLabel={`Food ${index + 1} meal type`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Timing"
-                        value={food.timing}
-                        onChangeText={(t) => setEditedFoods(prev => prev.map((f, i) => i === index ? { ...f, timing: t } : f))}
-                        accessibilityLabel={`Food ${index + 1} timing`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Quantity"
-                        value={food.quantity}
-                        onChangeText={(t) => setEditedFoods(prev => prev.map((f, i) => i === index ? { ...f, quantity: t } : f))}
-                        accessibilityLabel={`Food ${index + 1} quantity`}
-                      />
-                      <TouchableOpacity onPress={() => setEditedFoods(prev => prev.filter((_, i) => i !== index))} accessibilityLabel={`Remove food ${index + 1}`}>
-                        <Text style={styles.removeLink}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  <TouchableOpacity style={styles.addInlineButton} onPress={() => setEditedFoods(prev => [...prev, { name: '', mealType: '', timing: '', quantity: '' }])} accessibilityLabel="Add food">
-                    <Text style={styles.addInlineButtonText}>Add Food</Text>
+                {/* Foods Section - Matching Home Screen Style */}
+                <View style={styles.editExtractedDataSection}>
+                  <Text style={styles.editExtractedDataTitle}>🍎 Foods:</Text>
+                  {(editedFoods || []).map((food, index) => {
+                    const displayText = `• ${food.name || '[food name]'} (${food.mealType || '[meal type]'})${food.quantity ? ` - ${food.quantity}` : ''}`;
+                    return (
+                      <View key={`food-${index}`} style={styles.editDataItem}>
+                        <Text style={styles.editDataItemText}>{displayText}</Text>
+                        <TouchableOpacity 
+                          style={styles.editItemButton}
+                          onPress={() => openEditItemModal('food', index, food)}
+                          accessibilityLabel={`Edit food ${index + 1}`}
+                        >
+                          <Text style={styles.editItemButtonText}>✎</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.removeItemButton}
+                          onPress={() => setEditedFoods(prev => prev.filter((_, i) => i !== index))}
+                          accessibilityLabel={`Remove food ${index + 1}`}
+                        >
+                          <Text style={styles.removeItemButtonText}>🗑</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                  <TouchableOpacity 
+                    style={styles.addItemButton} 
+                    onPress={() => setEditedFoods(prev => [...prev, { name: '', mealType: '', timing: '', quantity: '' }])} 
+                    accessibilityLabel="Add food"
+                  >
+                    <Text style={styles.addItemButtonText}>+ Add Food</Text>
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.sectionHeader}>Reactions</Text>
-                <View>
-                  {(editedReactions || []).map((reaction, index) => (
-                    <View key={`reaction-${index}`} style={styles.editRow}>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Type"
-                        value={reaction.type}
-                        onChangeText={(t) => setEditedReactions(prev => prev.map((r, i) => i === index ? { ...r, type: t } : r))}
-                        accessibilityLabel={`Reaction ${index + 1} type`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Description"
-                        value={reaction.description}
-                        onChangeText={(t) => setEditedReactions(prev => prev.map((r, i) => i === index ? { ...r, description: t } : r))}
-                        accessibilityLabel={`Reaction ${index + 1} description`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Location"
-                        value={reaction.location}
-                        onChangeText={(t) => setEditedReactions(prev => prev.map((r, i) => i === index ? { ...r, location: t } : r))}
-                        accessibilityLabel={`Reaction ${index + 1} location`}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Severity"
-                        value={reaction.severity}
-                        onChangeText={(t) => setEditedReactions(prev => prev.map((r, i) => i === index ? { ...r, severity: t } : r))}
-                        accessibilityLabel={`Reaction ${index + 1} severity`}
-                      />
-                      <TouchableOpacity onPress={() => setEditedReactions(prev => prev.filter((_, i) => i !== index))} accessibilityLabel={`Remove reaction ${index + 1}`}>
-                        <Text style={styles.removeLink}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  <TouchableOpacity style={styles.addInlineButton} onPress={() => setEditedReactions(prev => [...prev, { type: '', description: '', location: '', severity: '' }])} accessibilityLabel="Add reaction">
-                    <Text style={styles.addInlineButtonText}>Add Reaction</Text>
+                {/* Reactions Section - Matching Home Screen Style */}
+                <View style={styles.editExtractedDataSection}>
+                  <Text style={styles.editExtractedDataTitle}>⚠️ Reactions:</Text>
+                  {(editedReactions || []).map((reaction, index) => {
+                    const delayText = reaction.reactionDelayMinutes ? ` - ${reaction.reactionDelayMinutes}min delay` : '';
+                    const displayText = `• ${reaction.description || '[description]'} (${reaction.type || '[type]'})${delayText}`;
+                    return (
+                      <View key={`reaction-${index}`} style={styles.editDataItem}>
+                        <Text style={styles.editDataItemText}>{displayText}</Text>
+                        <TouchableOpacity 
+                          style={styles.editItemButton}
+                          onPress={() => openEditItemModal('reaction', index, reaction)}
+                          accessibilityLabel={`Edit reaction ${index + 1}`}
+                        >
+                          <Text style={styles.editItemButtonText}>✎</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.removeItemButton}
+                          onPress={() => setEditedReactions(prev => prev.filter((_, i) => i !== index))}
+                          accessibilityLabel={`Remove reaction ${index + 1}`}
+                        >
+                          <Text style={styles.removeItemButtonText}>🗑</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                  <TouchableOpacity 
+                    style={styles.addItemButton} 
+                    onPress={() => setEditedReactions(prev => [...prev, { type: '', description: '', location: '', severity: '' }])} 
+                    accessibilityLabel="Add reaction"
+                  >
+                    <Text style={styles.addItemButtonText}>+ Add Reaction</Text>
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.modalActions}>
+                <View style={styles.editModalActions}>
                   <TouchableOpacity
-                    style={styles.primaryButton}
+                    style={styles.editModalSaveButton}
                     onPress={async () => {
                       const foods = (editedFoods || []).filter(f => Object.values(f).some(v => (v || '').toString().trim() !== ''));
                       const reactions = (editedReactions || []).filter(r => Object.values(r).some(v => (v || '').toString().trim() !== ''));
@@ -332,13 +346,11 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                     }}
                     accessibilityLabel="Save changes"
                   >
-                    <Text style={styles.primaryButtonText}>Save Changes</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditModalVisible(false)} accessibilityLabel="Cancel editing">
-                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                    <Text style={styles.editModalSaveButtonText}>Save Changes</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
+                  style={styles.editModalDeleteButton}
                   onPress={() => {
                     Alert.alert(
                       'Delete Entry',
@@ -367,10 +379,100 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                   }}
                   accessibilityLabel="Delete entry"
                 >
-                  <Text style={styles.deleteLink}>Delete Entry</Text>
+                  <Text style={styles.editModalDeleteButtonText}>Delete Entry</Text>
                 </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Individual Item Edit Modal */}
+      <Modal
+        visible={editItemModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={() => setEditItemModalVisible(false)}
+      >
+        <View style={styles.itemEditModalBackdrop}>
+          <View style={styles.itemEditModalCard}>
+            <Text style={styles.itemEditModalTitle}>
+              Edit {editingItemType === 'food' ? 'Food' : 'Reaction'}
+            </Text>
+            
+            {editingItemType === 'food' && (
+              <>
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Food name"
+                  value={editingItemData?.name || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, name: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Meal type (e.g., breakfast, lunch, snack)"
+                  value={editingItemData?.mealType || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, mealType: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Quantity (e.g., 1 cup, a big glass)"
+                  value={editingItemData?.quantity || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, quantity: text }))}
+                />
               </>
             )}
+            
+            {editingItemType === 'reaction' && (
+              <>
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Reaction type (e.g., behavioral, digestive, skin)"
+                  value={editingItemData?.type || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, type: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Description"
+                  value={editingItemData?.description || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, description: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Location (optional)"
+                  value={editingItemData?.location || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, location: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Severity (optional)"
+                  value={editingItemData?.severity || ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, severity: text }))}
+                />
+                <TextInput
+                  style={styles.itemEditInput}
+                  placeholder="Delay in minutes (optional)"
+                  value={editingItemData?.reactionDelayMinutes ? editingItemData.reactionDelayMinutes.toString() : ''}
+                  onChangeText={(text) => setEditingItemData(prev => ({ ...prev, reactionDelayMinutes: text ? parseInt(text) : null }))}
+                  keyboardType="numeric"
+                />
+              </>
+            )}
+            
+            <View style={styles.itemEditModalActions}>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => saveEditedItem(editingItemData)}
+              >
+                <Text style={styles.primaryButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => setEditItemModalVisible(false)}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -401,8 +503,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
   },
   addButton: {
     backgroundColor: '#28a745',
@@ -441,12 +541,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 100,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
+    flex: 1,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -712,5 +815,226 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: '500',
     marginLeft: 8,
+  },
+  editExtractedDataSection: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+  editExtractedDataTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 8,
+  },
+  editDataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  editDataItemText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#6c757d',
+    marginLeft: 8,
+    lineHeight: 16,
+  },
+  editItemButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  editItemButtonText: {
+    fontSize: 14,
+    color: '#007bff',
+  },
+  removeItemButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  removeItemButtonText: {
+    fontSize: 16,
+    color: '#dc3545',
+    fontWeight: 'bold',
+  },
+  addItemButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#e9ecef',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    marginTop: 4,
+    marginBottom: 15,
+  },
+  addItemButtonText: {
+    color: '#2c3e50',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  itemEditModalCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    marginHorizontal: 10,
+    borderRadius: 16,
+    maxHeight: '80%',
+    width: '90%',
+  },
+  itemEditModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#2c3e50',
+    textAlign: 'center',
+  },
+  itemEditInput: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    fontSize: 16,
+  },
+  itemEditModalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
+  },
+  editModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  editModalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#dc3545',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editModalCloseButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  editModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  editModalPlaceholder: {
+    width: 40,
+  },
+  editModalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  editModalLabel: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginBottom: 6,
+  },
+  editOriginalNote: {
+    backgroundColor: '#f1f3f5',
+    padding: 10,
+    borderRadius: 8,
+    color: '#495057',
+    marginBottom: 20,
+  },
+  editModalActions: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingBottom: 20,
+  },
+  editModalSaveButton: {
+    backgroundColor: '#28a745',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  editModalSaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  editModalDeleteButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  editModalDeleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  itemEditModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editItemButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e9ecef',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  editItemButtonText: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  removeItemButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8d7da',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  removeItemButtonText: {
+    fontSize: 14,
+    color: '#dc3545',
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  editButtonText: {
+    fontSize: 14,
+    color: '#6c757d',
   },
 });

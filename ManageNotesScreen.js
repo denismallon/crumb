@@ -8,11 +8,48 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Modal,
-  TextInput
+  TextInput,
+  Alert as NativeAlert,
+  Platform
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import Alert from '@blazejkustra/react-native-alert';
 import StorageService from './StorageService';
+
+const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
+  if (Platform.OS === 'web') {
+    const normalizedButtons = buttons && buttons.length > 0 ? buttons : [{ text: 'OK' }];
+    const fullMessage = title ? `${title}\n\n${message || ''}` : message || '';
+
+    if (typeof window === 'undefined') {
+      console.warn('Alert:', fullMessage);
+      normalizedButtons[0]?.onPress?.();
+      return;
+    }
+
+    if (normalizedButtons.length === 1) {
+      window.alert(fullMessage);
+      normalizedButtons[0]?.onPress?.();
+      return;
+    }
+
+    const confirmButton =
+      normalizedButtons.find(btn => btn.style === 'destructive') ||
+      normalizedButtons.find(btn => btn.style !== 'cancel') ||
+      normalizedButtons[normalizedButtons.length - 1];
+    const cancelButton =
+      normalizedButtons.find(btn => btn.style === 'cancel') || normalizedButtons[0];
+
+    const confirmed = window.confirm(fullMessage);
+    if (confirmed) {
+      confirmButton?.onPress?.();
+    } else {
+      cancelButton?.onPress?.();
+    }
+    return;
+  }
+
+  NativeAlert.alert(title, message, buttons, options);
+};
 
 export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [savedEntries, setSavedEntries] = useState([]);
@@ -59,14 +96,14 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       const processing = entries.filter(entry => entry.processingStatus === 'processing');
       setProcessingNotes(processing);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load saved entries.');
+      showAlert('Error', 'Failed to load saved entries.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteNote = (entryId) => {
-    Alert.alert(
+    showAlert(
       'Delete Note',
       'Are you sure you want to delete this note? This action cannot be undone.',
       [
@@ -88,12 +125,12 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       if (success) {
         // Remove from local state
         setSavedEntries(prev => prev.filter(entry => entry.id !== entryId));
-        Alert.alert('Success', 'Note deleted successfully.');
+        showAlert('Success', 'Note deleted successfully.');
       } else {
-        Alert.alert('Error', 'Failed to delete note.');
+        showAlert('Error', 'Failed to delete note.');
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while deleting the note.');
+      showAlert('Error', 'An error occurred while deleting the note.');
     } finally {
       setIsDeleting(null);
     }
@@ -337,7 +374,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                       const success = await StorageService.updateFoodLogEntry(editingEntry.id, { foods, reactions });
                       if (success) {
                         await loadSavedEntries();
-                        Alert.alert('Saved', 'Changes have been saved.', [
+                        showAlert('Saved', 'Changes have been saved.', [
                           {
                             text: 'OK',
                             onPress: () => {
@@ -347,7 +384,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                           }
                         ]);
                       } else {
-                        Alert.alert('Error', 'Failed to save changes.');
+                        showAlert('Error', 'Failed to save changes.');
                       }
                     }}
                     accessibilityLabel="Save changes"
@@ -358,7 +395,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                 <TouchableOpacity
                   style={styles.editModalDeleteButton}
                   onPress={() => {
-                    Alert.alert(
+                    showAlert(
                       'Delete Entry',
                       'This will permanently delete the entry. Continue?',
                       [
@@ -374,9 +411,9 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                               await loadSavedEntries();
                               setEditModalVisible(false);
                               setEditingEntry(null);
-                              Alert.alert('Deleted', 'Entry deleted.');
+                              showAlert('Deleted', 'Entry deleted.');
                             } else {
-                              Alert.alert('Error', 'Failed to delete entry.');
+                              showAlert('Error', 'Failed to delete entry.');
                             }
                           }
                         }

@@ -7,7 +7,8 @@ import {
   TextInput, 
   Alert,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';

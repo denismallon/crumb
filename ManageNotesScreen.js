@@ -16,6 +16,9 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import StorageService from './StorageService';
 
 const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
+  const alertLabel = title ? `${title}${message ? `: ${message}` : ''}` : message || '';
+  console.log(`Displaying alert: ${alertLabel}`);
+
   if (Platform.OS === 'web') {
     const normalizedButtons = buttons && buttons.length > 0 ? buttons : [{ text: 'OK' }];
     const fullMessage = title ? `${title}\n\n${message || ''}` : message || '';

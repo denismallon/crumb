@@ -5,13 +5,13 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Alert,
   SafeAreaView,
   ActivityIndicator,
   Modal,
   TextInput
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import Alert from '@blazejkustra/react-native-alert';
 import StorageService from './StorageService';
 
 export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
@@ -337,9 +337,15 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                       const success = await StorageService.updateFoodLogEntry(editingEntry.id, { foods, reactions });
                       if (success) {
                         await loadSavedEntries();
-                        setEditModalVisible(false);
-                        setEditingEntry(null);
-                        Alert.alert('Saved', 'Changes have been saved.');
+                        Alert.alert('Saved', 'Changes have been saved.', [
+                          {
+                            text: 'OK',
+                            onPress: () => {
+                              setEditModalVisible(false);
+                              setEditingEntry(null);
+                            }
+                          }
+                        ]);
                       } else {
                         Alert.alert('Error', 'Failed to save changes.');
                       }

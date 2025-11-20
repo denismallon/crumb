@@ -132,11 +132,21 @@ export default function AddNotesScreen({ onClose }) {
       setWebhookResponse(null);
       
       const formData = new FormData();
-      formData.append('audio0', {
-        uri: audioUri,
-        type: 'audio/m4a',
-        name: `recording_${Date.now()}.m4a`
-      });
+      
+      // Platform-specific handling
+      if (Platform.OS === 'web') {
+        // For web: fetch the blob and append it
+        const response = await fetch(audioUri);
+        const blob = await response.blob();
+        formData.append('audio0', blob, `recording_${Date.now()}.m4a`);
+      } else {
+        // For mobile: use the existing approach
+        formData.append('audio0', {
+          uri: audioUri,
+          type: 'audio/m4a',
+          name: `recording_${Date.now()}.m4a`
+        });
+      }
       
       // Set up timeout
       const timeoutPromise = new Promise((_, reject) => {

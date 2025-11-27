@@ -204,7 +204,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                     {isProcessing && (
                       <View style={styles.processingIndicator}>
                         <ActivityIndicator size="small" color="#007bff" />
-                        <Text style={styles.processingText}>Processing...</Text>
+                        <Text style={styles.processingText}>Extracting details...</Text>
                       </View>
                     )}
                     <View style={styles.entryHeader}>

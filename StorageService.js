@@ -160,7 +160,7 @@ class StorageService {
         extractionData: entryData.extractionData || null,
         extractionTimestamp: entryData.extractionTimestamp || null,
         transcriptionJobId: entryData.transcriptionJobId || null,
-        processingStatus: entryData.processingStatus || 'completed', // 'processing', 'completed', 'failed'
+        processingStatus: entryData.processingStatus || 'complete', // 'processing', 'complete', 'failed'
         processingStartedAt: entryData.processingStartedAt || null,
         processingCompletedAt: entryData.processingCompletedAt || null
       };
@@ -541,7 +541,7 @@ class StorageService {
         extractionTimestamp: new Date().toISOString(),
         foods: extractionData.foods || [],
         reactions: extractionData.reactions || [],
-        processingStatus: 'completed',
+        processingStatus: 'complete',
         processingCompletedAt: new Date().toISOString()
       };
 

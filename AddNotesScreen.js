@@ -5,7 +5,6 @@ import {
   View, 
   TouchableOpacity, 
   TextInput, 
-  Alert,
   SafeAreaView,
   ActivityIndicator,
   Platform
@@ -50,7 +49,8 @@ export default function AddNotesScreen({ onClose }) {
       // Request audio permissions
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant microphone permission to record audio.');
+        console.warn('[AddNotesScreen] Microphone permission denied');
+        setWebhookError('Please grant microphone permission to record audio.');
         setRecordingStatus('ready');
         setIsRecording(false);
         clearInterval(durationInterval.current);
@@ -88,7 +88,8 @@ export default function AddNotesScreen({ onClose }) {
       recordingRef.current = recording;
       await recording.startAsync();
     } catch (error) {
-      Alert.alert('Recording Error', 'Failed to start recording. Please try again.');
+      console.error('[AddNotesScreen] Failed to start recording', error);
+      setWebhookError('We couldn’t start recording. Please try again.');
       setRecordingStatus('ready');
       setIsRecording(false);
       clearInterval(durationInterval.current);
@@ -111,7 +112,8 @@ export default function AddNotesScreen({ onClose }) {
         await sendToWebhook(uri);
       }
     } catch (error) {
-      Alert.alert('Recording Error', 'Failed to stop recording. Please try again.');
+      console.error('[AddNotesScreen] Failed to stop recording', error);
+      setWebhookError('We couldn’t finish that recording. Please try again.');
       setRecordingStatus('ready');
       setIsRecording(false);
       clearInterval(durationInterval.current);
@@ -228,34 +230,37 @@ export default function AddNotesScreen({ onClose }) {
   
   const handleSaveNote = async () => {
     console.log('[AddNotesScreen] handleSaveNote invoked');
+    console.log('[AddNotesScreen] toggling isProcessingLLM -> true');
+    setIsProcessingLLM(true);
+    
+    const audioUri = recordingRef.current?.getURI();
+    console.log('[AddNotesScreen] audio URI resolved?', !!audioUri, audioUri);
+    
+    // Prepare entry payload before clearing local state
+    const entryData = {
+      text: editableTranscription,
+      source: 'voice',
+      confidence: webhookResponse?.confidence ? parseFloat(webhookResponse.confidence) : null,
+      editedFromTranscription: editableTranscription !== webhookResponse?.transcription,
+      audioUri: audioUri,
+      duration: recordingDuration,
+      transcriptionJobId: webhookResponse?.job_id,
+      processingStatus: 'processing' // Ensure processing status
+    };
+    console.log('[AddNotesScreen] entryData prepared', {
+      textLength: entryData.text?.length ?? 0,
+      hasAudio: !!entryData.audioUri,
+      duration: entryData.duration,
+      hasJobId: !!entryData.transcriptionJobId,
+      processingStatus: entryData.processingStatus
+    });
+    
+    // Immediately close modal for seamless UX
+    console.log('[AddNotesScreen] closing modal immediately after save press');
+    resetState();
+    onClose();
+    
     try {
-      console.log('[AddNotesScreen] toggling isProcessingLLM -> true');
-      setIsProcessingLLM(true);
-      
-      const audioUri = recordingRef.current?.getURI();
-      console.log('[AddNotesScreen] audio URI resolved?', !!audioUri, audioUri);
-      
-      // Create entry data for immediate saving
-      const entryData = {
-        text: editableTranscription,
-        source: 'voice',
-        confidence: webhookResponse?.confidence ? parseFloat(webhookResponse.confidence) : null,
-        editedFromTranscription: editableTranscription !== webhookResponse?.transcription,
-        // Additional metadata
-        audioUri: audioUri,
-        duration: recordingDuration,
-        transcriptionJobId: webhookResponse?.job_id,
-        processingStatus: 'processing' // Mark as processing
-      };
-      console.log('[AddNotesScreen] entryData prepared', {
-        textLength: entryData.text?.length ?? 0,
-        hasAudio: !!entryData.audioUri,
-        duration: entryData.duration,
-        hasJobId: !!entryData.transcriptionJobId,
-        processingStatus: entryData.processingStatus
-      });
-      
-      // Save note immediately with processing status
       console.log('[AddNotesScreen] calling StorageService.saveNoteForProcessing');
       const saveResult = await StorageService.saveNoteForProcessing(entryData);
       console.log('[AddNotesScreen] saveResult received', saveResult);
@@ -275,36 +280,13 @@ export default function AddNotesScreen({ onClose }) {
         } catch (queueError) {
           console.error('[AddNotesScreen] background queue add failed', queueError);
         }
-        
-        console.log('[AddNotesScreen] showing success Alert');
-        Alert.alert(
-          'Note Saved', 
-          'Your note has been saved and is being processed in the background. We\'ll notify you when the analysis is complete!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('[AddNotesScreen] success Alert confirmed, resetting state and closing');
-                // Reset state and close screen
-                resetState();
-                onClose();
-              }
-            }
-          ]
-        );
       } else {
         console.warn('[AddNotesScreen] saveResult indicates failure', saveResult);
-        Alert.alert('Save Error', 'Failed to save your note. Please try again.');
+        setWebhookError('We couldn’t save your note. Please try again.');
       }
     } catch (error) {
       console.error('[AddNotesScreen] handleSaveNote error', error);
-      Alert.alert(
-        'Save Error', 
-        'Failed to save your note. Please try again.'
-      );
-      
-      // Reset state without saving
-      resetState();
+      setWebhookError('We couldn’t save your note. Please try again.');
     } finally {
       console.log('[AddNotesScreen] handleSaveNote finally block, toggling isProcessingLLM -> false');
       setIsProcessingLLM(false);

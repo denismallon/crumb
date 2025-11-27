@@ -93,7 +93,14 @@ export default function AddNotesScreen({ onClose }) {
       recordingRef.current = recording;
       await recording.startAsync();
     } catch (error) {
-      setWebhookError('We couldn’t start recording. Please try again.');
+      // ADD DETAILED ERROR LOGGING
+      logWithTime('❌ Recording start failed:', error);
+      logWithTime('Error name:', error.name);
+      logWithTime('Error message:', error.message);
+      logWithTime('Error stack:', error.stack);
+      logWithTime('Platform:', Platform.OS);
+
+      setWebhookError(`We couldn't start recording. Please try again. (${error.message})`);
       setRecordingStatus('ready');
       setIsRecording(false);
       clearInterval(durationInterval.current);

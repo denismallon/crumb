@@ -13,6 +13,7 @@ import { Audio } from 'expo-av';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import StorageService from './StorageService';
 import BackgroundProcessingService from './BackgroundProcessingService';
+import NoteSaveEvents from './NoteSaveEvents';
 
 // Webhook URLs for easy maintenance and debugging
 const WEBHOOK_URLS = {
@@ -235,6 +236,8 @@ export default function AddNotesScreen({ onClose }) {
     
     const audioUri = recordingRef.current?.getURI();
     console.log('[AddNotesScreen] audio URI resolved?', !!audioUri, audioUri);
+    const tempId = `note-temp-${Date.now()}`;
+    const placeholderTimestamp = new Date().toISOString();
     
     // Prepare entry payload before clearing local state
     const entryData = {
@@ -259,6 +262,11 @@ export default function AddNotesScreen({ onClose }) {
     console.log('[AddNotesScreen] closing modal immediately after save press');
     resetState();
     onClose();
+    NoteSaveEvents.emitPlaceholderAdded({
+      tempId,
+      timestamp: placeholderTimestamp,
+      source: entryData.source
+    });
     
     try {
       console.log('[AddNotesScreen] calling StorageService.saveNoteForProcessing');
@@ -267,6 +275,13 @@ export default function AddNotesScreen({ onClose }) {
       
       if (saveResult?.success) {
         console.log('[AddNotesScreen] saveResult.success true, queueing for background processing');
+        NoteSaveEvents.emitPlaceholderHydrated({
+          tempId,
+          entryId: saveResult.entryId,
+          text: entryData.text,
+          timestamp: entryData.timestamp || placeholderTimestamp,
+          source: entryData.source
+        });
         try {
           await BackgroundProcessingService.addToProcessingQueue(
             saveResult.entryId, 
@@ -283,10 +298,12 @@ export default function AddNotesScreen({ onClose }) {
       } else {
         console.warn('[AddNotesScreen] saveResult indicates failure', saveResult);
         setWebhookError('We couldn’t save your note. Please try again.');
+        NoteSaveEvents.emitPlaceholderRemoved({ tempId });
       }
     } catch (error) {
       console.error('[AddNotesScreen] handleSaveNote error', error);
       setWebhookError('We couldn’t save your note. Please try again.');
+      NoteSaveEvents.emitPlaceholderRemoved({ tempId });
     } finally {
       console.log('[AddNotesScreen] handleSaveNote finally block, toggling isProcessingLLM -> false');
       setIsProcessingLLM(false);

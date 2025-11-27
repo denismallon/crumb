@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,10 +10,12 @@ import {
   Modal,
   TextInput,
   Alert as NativeAlert,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import StorageService from './StorageService';
+import NoteSaveEvents, { NOTE_SAVE_EVENT_TYPES } from './NoteSaveEvents';
 
 const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
   const alertLabel = title ? `${title}${message ? `: ${message}` : ''}` : message || '';
@@ -54,6 +56,64 @@ const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
   NativeAlert.alert(title, message, buttons, options);
 };
 
+const SkeletonNoteCard = () => {
+  const shimmer = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 0.9,
+          duration: 900,
+          useNativeDriver: true
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true
+        })
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [shimmer]);
+
+  const animatedStyle = { opacity: shimmer };
+
+  return (
+    <View style={styles.entryCard}>
+      <Animated.View style={[styles.skeletonLine, styles.skeletonLineShort, animatedStyle]} />
+      <Animated.View style={[styles.skeletonLine, styles.skeletonLineMedium, animatedStyle]} />
+      <Animated.View style={[styles.skeletonLine, styles.skeletonLineFull, animatedStyle]} />
+      <Animated.View style={[styles.skeletonBlock, animatedStyle]} />
+    </View>
+  );
+};
+
+const ProcessingNoteCard = ({ note }) => {
+  const timestamp = note.timestamp ? new Date(note.timestamp) : new Date();
+  const formattedDate = StorageService.formatDateForDisplay(timestamp.toISOString());
+  const formattedTime = timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <View style={styles.entryCard}>
+      <View style={styles.entryHeader}>
+        <View style={styles.entryInfo}>
+          <Text style={styles.entryDate}>
+            {formattedDate} at {formattedTime}
+          </Text>
+          <Text style={styles.entrySource}>{note.source === 'voice' ? '🎤 Voice' : '✏️ Manual'}</Text>
+        </View>
+        <View style={styles.processingIndicator}>
+          <ActivityIndicator size="small" color="#007bff" />
+          <Text style={styles.processingText}>Extracting details...</Text>
+        </View>
+      </View>
+      <Text style={styles.entryText}>{note.text || 'Processing transcription...'}</Text>
+    </View>
+  );
+};
+
 export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [savedEntries, setSavedEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +127,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editingItemType, setEditingItemType] = useState(null); // 'food' or 'reaction'
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [editingItemData, setEditingItemData] = useState(null);
+  const [optimisticNotes, setOptimisticNotes] = useState([]);
 
   useEffect(() => {
     loadSavedEntries();
@@ -76,10 +137,60 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     return () => clearInterval(pollInterval);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = NoteSaveEvents.subscribe((event) => {
+      if (!event) return;
+      const { type, payload } = event;
+      switch (type) {
+        case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_ADDED:
+          setOptimisticNotes((prev) => [
+            {
+              tempId: payload?.tempId,
+              status: 'skeleton',
+              timestamp: payload?.timestamp,
+              source: payload?.source || 'voice'
+            },
+            ...prev.filter((note) => note.tempId !== payload?.tempId)
+          ]);
+          break;
+        case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_HYDRATED:
+          setOptimisticNotes((prev) =>
+            prev.map((note) =>
+              note.tempId === payload?.tempId
+                ? {
+                    ...note,
+                    status: 'processing',
+                    entryId: payload?.entryId,
+                    text: payload?.text,
+                    timestamp: payload?.timestamp || note.timestamp,
+                    source: payload?.source || note.source
+                  }
+                : note
+            )
+          );
+          break;
+        case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_REMOVED:
+          setOptimisticNotes((prev) =>
+            prev.filter((note) => note.tempId !== payload?.tempId)
+          );
+          break;
+        default:
+          break;
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   const refreshEntries = async () => {
     try {
       const currentEntries = await StorageService.getFoodLogs();
       setSavedEntries(currentEntries);
+      setOptimisticNotes((prev) => {
+        if (!prev.length) return prev;
+        const entryIds = new Set(currentEntries.map((entry) => entry.id));
+        return prev.filter((note) => !note.entryId || !entryIds.has(note.entryId));
+      });
       
       // Get processing notes
       const processing = currentEntries.filter(entry => entry.processingStatus === 'processing');
@@ -94,6 +205,11 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       setIsLoading(true);
       const entries = await StorageService.getFoodLogs();
       setSavedEntries(entries);
+      setOptimisticNotes((prev) => {
+        if (!prev.length) return prev;
+        const entryIds = new Set(entries.map((entry) => entry.id));
+        return prev.filter((note) => !note.entryId || !entryIds.has(note.entryId));
+      });
       
       // Get processing notes
       const processing = entries.filter(entry => entry.processingStatus === 'processing');
@@ -197,6 +313,16 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
             </View>
           ) : (
             <View style={styles.entriesContainer}>
+              {optimisticNotes.map((note) =>
+                note.status === 'skeleton' ? (
+                  <SkeletonNoteCard key={note.tempId} />
+                ) : (
+                  <ProcessingNoteCard
+                    key={note.tempId}
+                    note={note}
+                  />
+                )
+              )}
               {savedEntries.map((entry) => {
                 const isProcessing = entry.processingStatus === 'processing';
                 return (
@@ -636,6 +762,26 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderLeftWidth: 4,
     borderLeftColor: '#007bff',
+  },
+  skeletonLine: {
+    height: 12,
+    borderRadius: 8,
+    backgroundColor: '#e0e3e7',
+    marginBottom: 10,
+  },
+  skeletonLineShort: {
+    width: '40%',
+  },
+  skeletonLineMedium: {
+    width: '70%',
+  },
+  skeletonLineFull: {
+    width: '100%',
+  },
+  skeletonBlock: {
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#e0e3e7',
   },
   entryHeader: {
     flexDirection: 'row',

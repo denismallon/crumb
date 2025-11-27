@@ -227,11 +227,17 @@ export default function AddNotesScreen({ onClose }) {
   };
   
   const handleSaveNote = async () => {
+    const tempId = `note-temp-${Date.now()}`;
+    const placeholderTimestamp = new Date().toISOString();
+    NoteSaveEvents.emitPlaceholderAdded({
+      tempId,
+      timestamp: placeholderTimestamp,
+      source: 'voice'
+    });
+
     setIsProcessingLLM(true);
     
     const audioUri = recordingRef.current?.getURI();
-    const tempId = `note-temp-${Date.now()}`;
-    const placeholderTimestamp = new Date().toISOString();
     
     // Prepare entry payload before clearing local state
     const entryData = {
@@ -247,11 +253,6 @@ export default function AddNotesScreen({ onClose }) {
     // Immediately close modal for seamless UX
     resetState();
     onClose();
-    NoteSaveEvents.emitPlaceholderAdded({
-      tempId,
-      timestamp: placeholderTimestamp,
-      source: entryData.source
-    });
     
     try {
       const saveResult = await StorageService.saveNoteForProcessing(entryData);

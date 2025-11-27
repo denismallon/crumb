@@ -29,7 +29,34 @@
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "lang": "en",
+      "themeColor": "#FF986F",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "scope": "/",
+      "shortName": "Crumb",
+      "name": "Crumb - Food Allergy Tracker",
+      "description": "Track your child's food intake and reactions to identify potential allergies",
+      "dir": "ltr",
+      "preferRelatedApplications": false,
+      "relatedApplications": [],
+      "splash": {
+        "backgroundColor": "#ffffff",
+        "resizeMode": "contain",
+        "image": "./assets/splash-icon.png"
+      },
+      "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-mobile-web-app-title": "Crumb",
+        "mobile-web-app-capable": "yes",
+        "theme-color": "#FF986F"
+      }
     },
     "extra": {
       "eas": {

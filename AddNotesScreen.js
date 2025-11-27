@@ -15,6 +15,11 @@ import StorageService from './StorageService';
 import BackgroundProcessingService from './BackgroundProcessingService';
 import NoteSaveEvents from './NoteSaveEvents';
 
+const logWithTime = (message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  console.log(`[${timestamp}]`, message, ...args);
+};
+
 // Webhook URLs for easy maintenance and debugging
 const WEBHOOK_URLS = {
   TRANSCRIPTION: 'https://primary-production-97918.up.railway.app/webhook/e463b9ed-7503-460b-b7ba-75dbb17e06f8',

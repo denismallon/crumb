@@ -50,7 +50,6 @@ export default function AddNotesScreen({ onClose }) {
       // Request audio permissions
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        console.warn('[AddNotesScreen] Microphone permission denied');
         setWebhookError('Please grant microphone permission to record audio.');
         setRecordingStatus('ready');
         setIsRecording(false);
@@ -89,7 +88,6 @@ export default function AddNotesScreen({ onClose }) {
       recordingRef.current = recording;
       await recording.startAsync();
     } catch (error) {
-      console.error('[AddNotesScreen] Failed to start recording', error);
       setWebhookError('We couldn’t start recording. Please try again.');
       setRecordingStatus('ready');
       setIsRecording(false);
@@ -113,7 +111,6 @@ export default function AddNotesScreen({ onClose }) {
         await sendToWebhook(uri);
       }
     } catch (error) {
-      console.error('[AddNotesScreen] Failed to stop recording', error);
       setWebhookError('We couldn’t finish that recording. Please try again.');
       setRecordingStatus('ready');
       setIsRecording(false);
@@ -230,12 +227,9 @@ export default function AddNotesScreen({ onClose }) {
   };
   
   const handleSaveNote = async () => {
-    console.log('[AddNotesScreen] handleSaveNote invoked');
-    console.log('[AddNotesScreen] toggling isProcessingLLM -> true');
     setIsProcessingLLM(true);
     
     const audioUri = recordingRef.current?.getURI();
-    console.log('[AddNotesScreen] audio URI resolved?', !!audioUri, audioUri);
     const tempId = `note-temp-${Date.now()}`;
     const placeholderTimestamp = new Date().toISOString();
     
@@ -250,18 +244,10 @@ export default function AddNotesScreen({ onClose }) {
       transcriptionJobId: webhookResponse?.job_id,
       processingStatus: 'processing' // Ensure processing status
     };
-    console.log('[AddNotesScreen] entryData prepared', {
-      textLength: entryData.text?.length ?? 0,
-      hasAudio: !!entryData.audioUri,
-      duration: entryData.duration,
-      hasJobId: !!entryData.transcriptionJobId,
-      processingStatus: entryData.processingStatus
-    });
-    
     // Immediately close modal for seamless UX
-    console.log('[AddNotesScreen] closing modal immediately after save press');
     resetState();
     onClose();
+    console.log('[AddNotesScreen] Save pressed, showing skeleton placeholder', { tempId });
     NoteSaveEvents.emitPlaceholderAdded({
       tempId,
       timestamp: placeholderTimestamp,
@@ -269,12 +255,13 @@ export default function AddNotesScreen({ onClose }) {
     });
     
     try {
-      console.log('[AddNotesScreen] calling StorageService.saveNoteForProcessing');
       const saveResult = await StorageService.saveNoteForProcessing(entryData);
-      console.log('[AddNotesScreen] saveResult received', saveResult);
       
       if (saveResult?.success) {
-        console.log('[AddNotesScreen] saveResult.success true, queueing for background processing');
+        console.log('[AddNotesScreen] Hydrating skeleton placeholder with saved note', {
+          tempId,
+          entryId: saveResult.entryId
+        });
         NoteSaveEvents.emitPlaceholderHydrated({
           tempId,
           entryId: saveResult.entryId,
@@ -291,21 +278,17 @@ export default function AddNotesScreen({ onClose }) {
               transcriptionJobId: webhookResponse?.job_id
             }
           );
-          console.log('[AddNotesScreen] background queue add success');
         } catch (queueError) {
-          console.error('[AddNotesScreen] background queue add failed', queueError);
+          setWebhookError('Processing queue is busy. We’ll keep trying.');
         }
       } else {
-        console.warn('[AddNotesScreen] saveResult indicates failure', saveResult);
         setWebhookError('We couldn’t save your note. Please try again.');
         NoteSaveEvents.emitPlaceholderRemoved({ tempId });
       }
     } catch (error) {
-      console.error('[AddNotesScreen] handleSaveNote error', error);
       setWebhookError('We couldn’t save your note. Please try again.');
       NoteSaveEvents.emitPlaceholderRemoved({ tempId });
     } finally {
-      console.log('[AddNotesScreen] handleSaveNote finally block, toggling isProcessingLLM -> false');
       setIsProcessingLLM(false);
     }
   };

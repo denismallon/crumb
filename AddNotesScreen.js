@@ -227,11 +227,9 @@ export default function AddNotesScreen({ onClose }) {
   };
   
   const handleSaveNote = async () => {
-    console.log('[ManageNotesScreen] handleSaveNote invoked');
     try {
       setIsProcessingLLM(true);
       const audioUri = recordingRef.current?.getURI();
-      console.log('[ManageNotesScreen] audio URI resolved?', !!audioUri);
       
       // Create entry data for immediate saving
       const entryData = {
@@ -245,35 +243,21 @@ export default function AddNotesScreen({ onClose }) {
         transcriptionJobId: webhookResponse?.job_id,
         processingStatus: 'processing' // Mark as processing
       };
-      console.log('[ManageNotesScreen] entryData prepared', {
-        hasText: !!entryData.text,
-        duration: entryData.duration,
-        hasJobId: !!entryData.transcriptionJobId,
-        processingStatus: entryData.processingStatus
-      });
       
       // Save note immediately with processing status
-      console.log('[ManageNotesScreen] calling StorageService.saveNoteForProcessing');
       const saveResult = await StorageService.saveNoteForProcessing(entryData);
-      console.log('[ManageNotesScreen] saveResult received', saveResult);
       
-      if (saveResult?.success) {
-        console.log('[ManageNotesScreen] save successful, adding to processing queue');
-        try {
-          await BackgroundProcessingService.addToProcessingQueue(
-            saveResult.entryId, 
-            {
-              audioUri: audioUri,
-              duration: recordingDuration,
-              transcriptionJobId: webhookResponse?.job_id
-            }
-          );
-          console.log('[ManageNotesScreen] background queue add succeeded');
-        } catch (queueError) {
-          console.error('[ManageNotesScreen] background queue add failed', queueError);
-        }
+      if (saveResult.success) {
+        // Add to background processing queue
+        await BackgroundProcessingService.addToProcessingQueue(
+          saveResult.entryId, 
+          {
+            audioUri: audioUri,
+            duration: recordingDuration,
+            transcriptionJobId: webhookResponse?.job_id
+          }
+        );
         
-        console.log('[ManageNotesScreen] displaying success alert');
         Alert.alert(
           'Note Saved', 
           'Your note has been saved and is being processed in the background. We\'ll notify you when the analysis is complete!',
@@ -281,7 +265,6 @@ export default function AddNotesScreen({ onClose }) {
             {
               text: 'OK',
               onPress: () => {
-                console.log('[ManageNotesScreen] success alert confirmed, resetting state');
                 // Reset state and close screen
                 resetState();
                 onClose();
@@ -290,11 +273,9 @@ export default function AddNotesScreen({ onClose }) {
           ]
         );
       } else {
-        console.warn('[ManageNotesScreen] saveResult indicates failure', saveResult);
         Alert.alert('Save Error', 'Failed to save your note. Please try again.');
       }
     } catch (error) {
-      console.error('[ManageNotesScreen] handleSaveNote threw error', error);
       Alert.alert(
         'Save Error', 
         'Failed to save your note. Please try again.'
@@ -303,7 +284,6 @@ export default function AddNotesScreen({ onClose }) {
       // Reset state without saving
       resetState();
     } finally {
-      console.log('[ManageNotesScreen] handleSaveNote finished, cleaning up');
       setIsProcessingLLM(false);
     }
   };

@@ -56,7 +56,7 @@ const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
   NativeAlert.alert(title, message, buttons, options);
 };
 
-const SkeletonNoteCard = () => {
+const SkeletonNoteCard = ({ tempId }) => {
   const shimmer = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -78,6 +78,11 @@ const SkeletonNoteCard = () => {
     return () => animation.stop();
   }, [shimmer]);
 
+  useEffect(() => {
+    console.log('[ManageNotesScreen] SkeletonNoteCard mounted', { tempId });
+    return () => console.log('[ManageNotesScreen] SkeletonNoteCard unmounted', { tempId });
+  }, [tempId]);
+
   const animatedStyle = { opacity: shimmer };
 
   return (
@@ -91,6 +96,18 @@ const SkeletonNoteCard = () => {
 };
 
 const ProcessingNoteCard = ({ note }) => {
+  useEffect(() => {
+    console.log('[ManageNotesScreen] ProcessingNoteCard mounted', {
+      tempId: note?.tempId,
+      entryId: note?.entryId
+    });
+    return () =>
+      console.log('[ManageNotesScreen] ProcessingNoteCard unmounted', {
+        tempId: note?.tempId,
+        entryId: note?.entryId
+      });
+  }, [note?.tempId, note?.entryId]);
+
   const timestamp = note.timestamp ? new Date(note.timestamp) : new Date();
   const formattedDate = StorageService.formatDateForDisplay(timestamp.toISOString());
   const formattedTime = timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -141,8 +158,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     const unsubscribe = NoteSaveEvents.subscribe((event) => {
       if (!event) return;
       const { type, payload } = event;
+      console.log('[ManageNotesScreen] NoteSaveEvents received', { type, payload });
       switch (type) {
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_ADDED:
+          console.log('[ManageNotesScreen] Adding skeleton placeholder', { tempId: payload?.tempId });
           setOptimisticNotes((prev) => [
             {
               tempId: payload?.tempId,
@@ -154,6 +173,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
           ]);
           break;
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_HYDRATED:
+          console.log('[ManageNotesScreen] Hydrating placeholder', {
+            tempId: payload?.tempId,
+            entryId: payload?.entryId
+          });
           setOptimisticNotes((prev) =>
             prev.map((note) =>
               note.tempId === payload?.tempId
@@ -170,6 +193,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
           );
           break;
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_REMOVED:
+          console.log('[ManageNotesScreen] Removing placeholder', { tempId: payload?.tempId });
           setOptimisticNotes((prev) =>
             prev.filter((note) => note.tempId !== payload?.tempId)
           );
@@ -315,7 +339,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
             <View style={styles.entriesContainer}>
               {optimisticNotes.map((note) =>
                 note.status === 'skeleton' ? (
-                  <SkeletonNoteCard key={note.tempId} />
+                  <SkeletonNoteCard key={note.tempId} tempId={note.tempId} />
                 ) : (
                   <ProcessingNoteCard
                     key={note.tempId}

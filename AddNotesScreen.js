@@ -247,7 +247,6 @@ export default function AddNotesScreen({ onClose }) {
     // Immediately close modal for seamless UX
     resetState();
     onClose();
-    console.log('[AddNotesScreen] Save pressed, showing skeleton placeholder', { tempId });
     NoteSaveEvents.emitPlaceholderAdded({
       tempId,
       timestamp: placeholderTimestamp,
@@ -258,10 +257,6 @@ export default function AddNotesScreen({ onClose }) {
       const saveResult = await StorageService.saveNoteForProcessing(entryData);
       
       if (saveResult?.success) {
-        console.log('[AddNotesScreen] Hydrating skeleton placeholder with saved note', {
-          tempId,
-          entryId: saveResult.entryId
-        });
         NoteSaveEvents.emitPlaceholderHydrated({
           tempId,
           entryId: saveResult.entryId,

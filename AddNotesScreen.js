@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  TextInput, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TextInput,
   SafeAreaView,
   ActivityIndicator,
-  Platform
+  Platform,
+  ScrollView
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -61,6 +62,15 @@ export default function AddNotesScreen({ onClose }) {
         clearInterval(durationInterval.current);
         return;
       }
+
+      // Configure audio session for recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
 
       // Configure audio recording
       const recording = new Audio.Recording();
@@ -368,12 +378,12 @@ export default function AddNotesScreen({ onClose }) {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.recordingSection}>
           <Text style={[styles.statusText, { color: getStatusColor() }]}>
             {getStatusText()}
           </Text>
-          
+
           <TouchableOpacity
             style={[
               styles.recordButton,
@@ -386,7 +396,7 @@ export default function AddNotesScreen({ onClose }) {
               {isRecording ? '⏹️' : '🎤'}
             </Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.recordHint}>
             {isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
           </Text>
@@ -400,7 +410,7 @@ export default function AddNotesScreen({ onClose }) {
             <Text style={styles.loadingSubtext}>This may take a few moments</Text>
           </View>
         )}
-        
+
         {/* Processing State */}
         {recordingStatus === 'processing' && !isLoadingWebhook && (
           <View style={styles.processingSection}>
@@ -409,7 +419,7 @@ export default function AddNotesScreen({ onClose }) {
             <Text style={styles.processingSubtext}>Please wait while we process your audio</Text>
           </View>
         )}
-        
+
         {/* Error State */}
         {webhookError && (
           <View style={styles.errorSection}>
@@ -421,7 +431,7 @@ export default function AddNotesScreen({ onClose }) {
             </TouchableOpacity>
           </View>
         )}
-        
+
         {/* Transcription Confirmation */}
         {showTranscriptionConfirmation && (
           <View style={styles.transcriptionSection}>
@@ -437,7 +447,7 @@ export default function AddNotesScreen({ onClose }) {
               placeholder="Your transcribed text will appear here..."
               placeholderTextColor="#999"
             />
-            
+
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -445,7 +455,7 @@ export default function AddNotesScreen({ onClose }) {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-            
+
               <TouchableOpacity
                 style={[styles.saveButton, isProcessingLLM && styles.saveButtonDisabled]}
                 onPress={handleSaveNote}
@@ -463,7 +473,7 @@ export default function AddNotesScreen({ onClose }) {
             </View>
           </View>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -507,7 +517,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   recordingSection: {
     alignItems: 'center',

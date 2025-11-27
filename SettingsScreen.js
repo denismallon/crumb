@@ -10,6 +10,11 @@ import {
 } from 'react-native';
 import StorageService from './StorageService';
 
+const logWithTime = (message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  console.log(`[${timestamp}]`, message, ...args);
+};
+
 export default function SettingsScreen({ onClose }) {
   const [isWorking, setIsWorking] = useState(false);
 
@@ -18,7 +23,7 @@ export default function SettingsScreen({ onClose }) {
       setIsWorking(true);
       const data = await StorageService.exportAllData();
       if (data) {
-        console.log('Exported data:', data);
+        logWithTime('Exported data:', data);
         Alert.alert('Export Complete', 'Data exported to console.');
       } else {
         Alert.alert('Export Error', 'Failed to export data.');

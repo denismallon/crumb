@@ -3,6 +3,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const logWithTime = (message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  console.log(`[${timestamp}]`, message, ...args);
+};
+
 const app = express();
 const PORT = 5678;
 
@@ -28,24 +33,24 @@ app.use(express.urlencoded({ extended: true }));
 
 // Webhook endpoint
 app.post('/webhook-test/:id', upload.single('audio'), (req, res) => {
-  console.log('🎯 Webhook received!');
-  console.log('📋 Request ID:', req.params.id);
-  console.log('📝 Text:', req.body.text);
-  console.log('⏰ Timestamp:', req.body.timestamp);
-  console.log('✅ Status:', req.body.status);
-  console.log('⏱️ Duration:', req.body.duration);
+  logWithTime('🎯 Webhook received!');
+  logWithTime('📋 Request ID:', req.params.id);
+  logWithTime('📝 Text:', req.body.text);
+  logWithTime('⏰ Timestamp:', req.body.timestamp);
+  logWithTime('✅ Status:', req.body.status);
+  logWithTime('⏱️ Duration:', req.body.duration);
   
   if (req.file) {
-    console.log('🎵 Audio file received:', req.file.filename);
-    console.log('📁 File path:', req.file.path);
-    console.log('📏 File size:', req.file.size, 'bytes');
+    logWithTime('🎵 Audio file received:', req.file.filename);
+    logWithTime('📁 File path:', req.file.path);
+    logWithTime('📏 File size:', req.file.size, 'bytes');
   } else {
-    console.log('❌ No audio file received');
+    logWithTime('❌ No audio file received');
   }
   
   // Log the complete request
-  console.log('📦 Complete request body:', req.body);
-  console.log('📦 Complete request files:', req.file);
+  logWithTime('📦 Complete request body:', req.body);
+  logWithTime('📦 Complete request files:', req.file);
   
   // Send success response
   res.status(200).json({
@@ -74,10 +79,10 @@ app.get('/health', (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Webhook server running on http://192.168.1.78:${PORT}`);
-  console.log(`🔗 Health check: http://192.168.1.78:${PORT}/health`);
-  console.log(`📡 Webhook endpoint: http://192.168.1.78:${PORT}/webhook-test/5891af11-e2a1-445f-a0ba-240d2b783f2b`);
-  console.log('⏳ Waiting for webhook calls...');
+  logWithTime(`🚀 Webhook server running on http://192.168.1.78:${PORT}`);
+  logWithTime(`🔗 Health check: http://192.168.1.78:${PORT}/health`);
+  logWithTime(`📡 Webhook endpoint: http://192.168.1.78:${PORT}/webhook-test/5891af11-e2a1-445f-a0ba-240d2b783f2b`);
+  logWithTime('⏳ Waiting for webhook calls...');
 });
 
 // Handle errors

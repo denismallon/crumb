@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const logWithTime = (message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  console.log(`[${timestamp}]`, message, ...args);
+};
+
 // TypeScript-style interfaces (as JSDoc comments for better IDE support)
 /**
  * @typedef {Object} FoodLogEntry
@@ -199,7 +204,7 @@ class StorageService {
         [statsKey]: currentStats.stats[statsKey] + 1
       });
 
-      console.log('Food log entry saved successfully:', entry.id);
+      logWithTime('Food log entry saved successfully:', entry.id);
       return true;
 
     } catch (error) {
@@ -266,7 +271,7 @@ class StorageService {
       // Update metadata
       await this.updateMetadata('lastUpdated', new Date().toISOString());
 
-      console.log('Food log entry updated successfully:', id);
+      logWithTime('Food log entry updated successfully:', id);
       return true;
 
     } catch (error) {
@@ -300,7 +305,7 @@ class StorageService {
       await this.updateMetadata('totalEntries', filteredLogs.length);
       await this.updateMetadata('lastUpdated', new Date().toISOString());
 
-      console.log('Food log entry deleted successfully:', id);
+      logWithTime('Food log entry deleted successfully:', id);
       return true;
 
     } catch (error) {
@@ -365,7 +370,7 @@ class StorageService {
       await AsyncStorage.removeItem(this.STORAGE_KEYS.FOOD_LOGS);
       await this.initializeMetadata(); // Reset metadata
       
-      console.log('All data cleared successfully');
+      logWithTime('All data cleared successfully');
       return true;
     } catch (error) {
       console.error('Failed to clear data:', error);
@@ -509,7 +514,7 @@ class StorageService {
         [statsKey]: currentStats.stats[statsKey] + 1
       });
 
-      console.log('Note saved for processing:', entry.id);
+      logWithTime('Note saved for processing:', entry.id);
       return { success: true, entryId: entry.id };
 
     } catch (error) {
@@ -554,7 +559,7 @@ class StorageService {
       // Update metadata
       await this.updateMetadata('lastUpdated', new Date().toISOString());
 
-      console.log('Note updated with extraction results:', entryId);
+      logWithTime('Note updated with extraction results:', entryId);
       return true;
 
     } catch (error) {
@@ -596,7 +601,7 @@ class StorageService {
       // Update metadata
       await this.updateMetadata('lastUpdated', new Date().toISOString());
 
-      console.log('Note marked as processing failed:', entryId);
+      logWithTime('Note marked as processing failed:', entryId);
       return true;
 
     } catch (error) {

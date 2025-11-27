@@ -1,5 +1,10 @@
 import StorageService from './StorageService';
 
+const logWithTime = (message, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  console.log(`[${timestamp}]`, message, ...args);
+};
+
 // Webhook URLs for easy maintenance and debugging
 const WEBHOOK_URLS = {
   EXTRACTION: 'https://primary-production-97918.up.railway.app/webhook/fab624fa-c5e7-4439-b39c-3a7e13cca74f'
@@ -34,7 +39,7 @@ class BackgroundProcessingService {
         this.processQueue();
       }
       
-      console.log(`Added entry ${entryId} to processing queue`);
+      logWithTime(`Added entry ${entryId} to processing queue`);
     } catch (error) {
       console.error('Failed to add to processing queue:', error);
     }
@@ -49,7 +54,7 @@ class BackgroundProcessingService {
     }
 
     this.isProcessing = true;
-    console.log(`Starting to process ${this.processingQueue.size} notes`);
+    logWithTime(`Starting to process ${this.processingQueue.size} notes`);
 
     while (this.processingQueue.size > 0) {
       const entryId = this.processingQueue.values().next().value;
@@ -64,7 +69,7 @@ class BackgroundProcessingService {
     }
 
     this.isProcessing = false;
-    console.log('Finished processing queue');
+    logWithTime('Finished processing queue');
   }
 
   /**
@@ -82,11 +87,11 @@ class BackgroundProcessingService {
       }
 
       if (note.processingStatus !== 'processing') {
-        console.log(`Note ${entryId} is not in processing status, skipping`);
+        logWithTime(`Note ${entryId} is not in processing status, skipping`);
         return;
       }
 
-      console.log(`Processing note ${entryId} for LLM extraction`);
+      logWithTime(`Processing note ${entryId} for LLM extraction`);
 
       // Set up timeout for LLM extraction (60 seconds for background processing)
       const extractionTimeoutPromise = new Promise((_, reject) => {
@@ -145,7 +150,7 @@ class BackgroundProcessingService {
       if (success) {
         const foodCount = extractedData.foods ? extractedData.foods.length : 0;
         const reactionCount = extractedData.reactions ? extractedData.reactions.length : 0;
-        console.log(`Successfully processed note ${entryId}: ${foodCount} foods, ${reactionCount} reactions`);
+        logWithTime(`Successfully processed note ${entryId}: ${foodCount} foods, ${reactionCount} reactions`);
         
         // Trigger notification (this would be implemented based on your notification system)
         this.triggerProcessingCompleteNotification(entryId, foodCount, reactionCount);
@@ -169,7 +174,7 @@ class BackgroundProcessingService {
   triggerProcessingCompleteNotification(entryId, foodCount, reactionCount) {
     // This is where you would implement your notification system
     // For now, we'll just log it and could use a simple alert
-    console.log(`Processing complete notification for ${entryId}: ${foodCount} foods, ${reactionCount} reactions`);
+    logWithTime(`Processing complete notification for ${entryId}: ${foodCount} foods, ${reactionCount} reactions`);
     
     // You could implement:
     // - Push notifications
@@ -196,7 +201,7 @@ class BackgroundProcessingService {
   clearQueue() {
     this.processingQueue.clear();
     this.isProcessing = false;
-    console.log('Processing queue cleared');
+    logWithTime('Processing queue cleared');
   }
 }
 

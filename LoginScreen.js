@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './supabase';
+import { posthog } from 'posthog-react-native';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -105,6 +106,16 @@ export default function LoginScreen() {
       }
 
       logWithTime('✅ OTP verified successfully, session created');
+
+      // Identify user in PostHog
+      if (data.session.user) {
+        posthog.identify(data.session.user.id, {
+          email: data.session.user.email,
+          created_at: data.session.user.created_at
+        });
+        logWithTime('✅ User identified in PostHog:', data.session.user.id);
+      }
+
       // Session is automatically stored and managed by Supabase
       // Auth state listener in App.js will handle navigation
     } catch (err) {

@@ -1,3 +1,5 @@
+import { posthog } from 'posthog-react-native';
+
 const subscribers = new Set();
 
 export const NOTE_SAVE_EVENT_TYPES = {
@@ -6,7 +8,9 @@ export const NOTE_SAVE_EVENT_TYPES = {
   PLACEHOLDER_REMOVED: 'PLACEHOLDER_REMOVED'
 };
 
+// Emit an event to both PostHog and all subscribers
 const emit = (event) => {
+  // Notify all JS subscribers
   subscribers.forEach((callback) => {
     try {
       callback(event);
@@ -14,6 +18,13 @@ const emit = (event) => {
       console.error('NoteSaveEvents subscriber error:', error);
     }
   });
+
+  // Capture the event in PostHog
+  try {
+    posthog.capture(event.type, event.payload);
+  } catch (error) {
+    console.error('PostHog capture error:', error);
+  }
 };
 
 const subscribe = (callback) => {
@@ -36,4 +47,3 @@ export default {
   emitPlaceholderHydrated,
   emitPlaceholderRemoved
 };
-

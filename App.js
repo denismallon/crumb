@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { PostHogProvider } from 'posthog-react-native';
 import { AuthProvider, useAuth } from './AuthContext';
 import LoginScreen from './LoginScreen';
 import SettingsScreen from './SettingsScreen';
@@ -68,9 +69,18 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <PostHogProvider
+      apiKey="phc_kPyeAFr7w2UR4RZP1UVV2NzXSxumGTvzYbMr65BEyoO"
+      options={{
+        host: 'https://eu.i.posthog.com',
+        enableSessionReplay: true,
+      }}
+      autocapture
+    >
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </PostHogProvider>
   );
 }
 

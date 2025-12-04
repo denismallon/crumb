@@ -207,4 +207,3 @@ class BackgroundProcessingService {
 
 // Export singleton instance
 export default BackgroundProcessingService.getInstance();
-

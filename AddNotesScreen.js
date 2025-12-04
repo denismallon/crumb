@@ -380,7 +380,7 @@ export default function AddNotesScreen({ onClose }) {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.recordingSection}>
-          <Text style={[styles.statusText, { color: getStatusColor() }]}>
+          <Text style={[styles.statusText, { color: getStatusColor() }]}> 
             {getStatusText()}
           </Text>
 

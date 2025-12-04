@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabase';
+import { posthog } from 'posthog-react-native';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -34,6 +35,13 @@ export const AuthProvider = ({ children }) => {
           logWithTime('✅ Found existing session for:', currentSession.user.email);
           setSession(currentSession);
           setUser(currentSession.user);
+
+          // Identify user in PostHog
+          posthog.identify(currentSession.user.id, {
+            email: currentSession.user.email,
+            created_at: currentSession.user.created_at
+          });
+          logWithTime('✅ User identified in PostHog:', currentSession.user.id);
         } else {
           logWithTime('ℹ️  No existing session found');
         }
@@ -55,10 +63,21 @@ export const AuthProvider = ({ children }) => {
           logWithTime('✅ Session active for:', currentSession.user.email);
           setSession(currentSession);
           setUser(currentSession.user);
+
+          // Identify user in PostHog on auth state changes
+          posthog.identify(currentSession.user.id, {
+            email: currentSession.user.email,
+            created_at: currentSession.user.created_at
+          });
+          logWithTime('✅ User identified in PostHog:', currentSession.user.id);
         } else {
           logWithTime('ℹ️  Session ended');
           setSession(null);
           setUser(null);
+
+          // Reset PostHog identification on logout
+          posthog.reset();
+          logWithTime('✅ PostHog reset');
         }
 
         setLoading(false);

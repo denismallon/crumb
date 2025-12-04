@@ -900,6 +900,7 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 80,
     alignItems: 'flex-end',
+    zIndex: 999,
   },
   primaryFab: {
     backgroundColor: '#28a745',
@@ -909,6 +910,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
     marginBottom: 12,
   },
   secondaryFab: {
@@ -919,6 +924,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   fabIcon: {
     fontSize: 22,

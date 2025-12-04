@@ -319,6 +319,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       
       <View style={styles.header}>
         <Text style={styles.title}>How are they doing?</Text>
+        <Text style={styles.subtitle}>staging version</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -710,6 +711,13 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     textAlign: 'center',
     fontFamily: 'System',
+  },
+  subtitle: {
+    fontSize: 11,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   content: {
     flex: 1,

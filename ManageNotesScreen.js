@@ -11,7 +11,8 @@ import {
   TextInput,
   Alert as NativeAlert,
   Platform,
-  Animated
+  Animated,
+  Linking
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import StorageService from './StorageService';
@@ -413,6 +414,14 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
               })}
             </View>
           )}
+        </View>
+
+        {/* Branding Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>© 2025 Crumb Health Ltd</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.heycrumb.io')}>
+            <Text style={styles.footerLink}>www.heycrumb.io</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
       {/* Floating Action Buttons */}
@@ -1257,5 +1266,23 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     color: '#6c757d',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingTop: 30,
+    paddingBottom: 20,
+    marginTop: 20,
+  },
+  footerText: {
+    fontSize: 11,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  footerLink: {
+    fontSize: 11,
+    color: '#6c757d',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
 });

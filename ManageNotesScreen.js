@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   // removed processing diagnostics styles
 
   fabContainer: {
-    position: 'absolute',
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
     right: 20,
     bottom: 80,
     alignItems: 'flex-end',

@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView
 } from 'react-native';
+import { useAuth } from './AuthContext';
 import StorageService from './StorageService';
 
 const logWithTime = (message, ...args) => {
@@ -16,6 +17,7 @@ const logWithTime = (message, ...args) => {
 };
 
 export default function SettingsScreen({ onClose }) {
+  const { user, signOut } = useAuth();
   const [isWorking, setIsWorking] = useState(false);
 
   const exportData = async () => {
@@ -59,6 +61,33 @@ export default function SettingsScreen({ onClose }) {
     );
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsWorking(true);
+              await signOut();
+              // Navigation will be handled automatically by auth state change
+              logWithTime('Logged out successfully');
+            } catch (error) {
+              logWithTime('Logout error:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            } finally {
+              setIsWorking(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -70,6 +99,14 @@ export default function SettingsScreen({ onClose }) {
       </View>
       
       <ScrollView contentContainerStyle={styles.content}>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.infoText}>Logged in as: {user?.email}</Text>
+          <TouchableOpacity style={styles.dangerButton} onPress={handleLogout} disabled={isWorking} accessibilityLabel="Log out">
+            <Text style={styles.dangerButtonText}>Log Out</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data Management</Text>

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { AuthProvider, useAuth } from './AuthContext';
+import LoginScreen from './LoginScreen';
 import SettingsScreen from './SettingsScreen';
 import ManageNotesScreen from './ManageNotesScreen';
 import AddNotesScreen from './AddNotesScreen';
@@ -11,15 +14,18 @@ const logWithTime = (message, ...args) => {
 
 const BOOT_LOG_ID = 'BOOT-2025-11-20-001';
 
-export default function App() {
+function AppContent() {
+  const { session, loading } = useAuth();
   const [currentScreen, setCurrentScreen] = useState('manage'); // 'manage' | 'add' | 'settings'
 
   useEffect(() => {
     logWithTime(`App boot sequence started (${BOOT_LOG_ID})`);
     // Initialize background processing service
     // This will start processing any notes that were left in processing state
-    BackgroundProcessingService.processQueue();
-  }, []);
+    if (session) {
+      BackgroundProcessingService.processQueue();
+    }
+  }, [session]);
 
   const handleAddNote = () => {
     setCurrentScreen('add');
@@ -33,6 +39,22 @@ export default function App() {
     setCurrentScreen('settings');
   };
 
+  // Show loading screen while checking auth state
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF986F" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!session) {
+    return <LoginScreen />;
+  }
+
+  // Show appropriate screen based on navigation state
   if (currentScreen === 'add') {
     return <AddNotesScreen onClose={handleCloseAddNote} />;
   }
@@ -43,3 +65,25 @@ export default function App() {
 
   return <ManageNotesScreen onAddNote={handleAddNote} onOpenSettings={openSettings} />;
 }
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6c757d',
+  },
+});

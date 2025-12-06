@@ -40,8 +40,7 @@ export const AuthProvider = ({ children }) => {
           try {
             if (posthog?.identify && typeof posthog.identify === 'function') {
               posthog.identify(currentSession.user.id, {
-                email: currentSession.user.email,
-                created_at: currentSession.user.created_at
+                email: currentSession.user.email
               });
               logWithTime('✅ User identified in PostHog:', currentSession.user.id);
             }
@@ -74,8 +73,7 @@ export const AuthProvider = ({ children }) => {
           try {
             if (posthog?.identify && typeof posthog.identify === 'function') {
               posthog.identify(currentSession.user.id, {
-                email: currentSession.user.email,
-                created_at: currentSession.user.created_at
+                email: currentSession.user.email
               });
               logWithTime('✅ User identified in PostHog:', currentSession.user.id);
             }

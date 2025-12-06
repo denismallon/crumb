@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import BackgroundProcessingService from './BackgroundProcessingService';
 import NoteSaveEvents from './NoteSaveEvents';
@@ -28,6 +29,7 @@ const WEBHOOK_URLS = {
 };
 
 export default function AddNotesScreen({ onClose }) {
+  const posthog = usePostHog();
   const [recordingStatus, setRecordingStatus] = useState('ready');
   const [transcribedText, setTranscribedText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -41,6 +43,14 @@ export default function AddNotesScreen({ onClose }) {
   const recordingRef = useRef(null);
   const durationInterval = useRef(null);
   const webhookTimeoutRef = useRef(null);
+  const hasTrackedEdit = useRef(false);
+
+  // Track screen view on mount
+  useEffect(() => {
+    if (posthog?.screen) {
+      posthog.screen('AddNotesScreen');
+    }
+  }, [posthog]);
 
   const startRecording = async () => {
     try {
@@ -102,6 +112,13 @@ export default function AddNotesScreen({ onClose }) {
 
       recordingRef.current = recording;
       await recording.startAsync();
+
+      // Track recording started
+      if (posthog?.capture) {
+        posthog.capture('recording_started', {
+          screen: 'AddNotesScreen'
+        });
+      }
     } catch (error) {
       // ADD DETAILED ERROR LOGGING
       logWithTime('❌ Recording start failed:', error);
@@ -109,6 +126,15 @@ export default function AddNotesScreen({ onClose }) {
       logWithTime('Error message:', error.message);
       logWithTime('Error stack:', error.stack);
       logWithTime('Platform:', Platform.OS);
+
+      // Track error
+      if (posthog?.capture) {
+        posthog.capture('error_occurred', {
+          screen: 'AddNotesScreen',
+          error_type: 'recording_start_failed',
+          message: error.message
+        });
+      }
 
       setWebhookError(`We couldn't start recording. Please try again. (${error.message})`);
       setRecordingStatus('ready');
@@ -123,17 +149,34 @@ export default function AddNotesScreen({ onClose }) {
       setIsRecording(false);
       clearInterval(durationInterval.current);
 
+      // Track recording stopped
+      if (posthog?.capture) {
+        posthog.capture('recording_stopped', {
+          screen: 'AddNotesScreen',
+          duration_seconds: recordingDuration
+        });
+      }
+
       if (recordingRef.current) {
         await recordingRef.current.stopAndUnloadAsync();
-        
+
         // Get the audio file URI
         const uri = recordingRef.current.getURI();
-        
+
         // Send to webhook for transcription
         await sendToWebhook(uri);
       }
     } catch (error) {
-      setWebhookError('We couldn’t finish that recording. Please try again.');
+      // Track error
+      if (posthog?.capture) {
+        posthog.capture('error_occurred', {
+          screen: 'AddNotesScreen',
+          error_type: 'recording_stop_failed',
+          message: error.message
+        });
+      }
+
+      setWebhookError('We couldn\'t finish that recording. Please try again.');
       setRecordingStatus('ready');
       setIsRecording(false);
       clearInterval(durationInterval.current);
@@ -214,8 +257,17 @@ export default function AddNotesScreen({ onClose }) {
         setEditableTranscription(response.transcription);
         setShowTranscriptionConfirmation(true);
         setRecordingStatus('ready');
+
+        // Track transcription received
+        if (posthog?.capture) {
+          posthog.capture('transcription_received', {
+            screen: 'AddNotesScreen',
+            confidence: response.confidence,
+            character_count: response.transcription?.length || 0
+          });
+        }
         break;
-        
+
       case 'processing':
         setRecordingStatus('processing');
         // Poll for updates if job_id is provided
@@ -223,12 +275,21 @@ export default function AddNotesScreen({ onClose }) {
           pollForTranscriptionUpdate(response.job_id);
         }
         break;
-        
+
       case 'error':
         setWebhookError(response.error);
         setRecordingStatus('ready');
+
+        // Track transcription error
+        if (posthog?.capture) {
+          posthog.capture('error_occurred', {
+            screen: 'AddNotesScreen',
+            error_type: 'transcription_failed',
+            message: response.error
+          });
+        }
         break;
-        
+
       default:
         setWebhookError('Unknown response format');
         setRecordingStatus('ready');
@@ -258,20 +319,33 @@ export default function AddNotesScreen({ onClose }) {
     });
 
     setIsProcessingLLM(true);
-    
+
     const audioUri = recordingRef.current?.getURI();
-    
+
     // Prepare entry payload before clearing local state
+    const wasEdited = editableTranscription !== webhookResponse?.transcription;
     const entryData = {
       text: editableTranscription,
       source: 'voice',
       confidence: webhookResponse?.confidence ? parseFloat(webhookResponse.confidence) : null,
-      editedFromTranscription: editableTranscription !== webhookResponse?.transcription,
+      editedFromTranscription: wasEdited,
       audioUri: audioUri,
       duration: recordingDuration,
       transcriptionJobId: webhookResponse?.job_id,
       processingStatus: 'processing' // Ensure processing status
     };
+
+    // Track note saved event
+    if (posthog?.capture) {
+      posthog.capture('note_saved', {
+        screen: 'AddNotesScreen',
+        source: 'voice',
+        was_edited: wasEdited,
+        character_count: editableTranscription?.length || 0,
+        recording_duration_seconds: recordingDuration
+      });
+    }
+
     // Immediately close modal for seamless UX
     resetState();
     onClose();
@@ -319,12 +393,38 @@ export default function AddNotesScreen({ onClose }) {
     }
   };
   
+  const handleTranscriptionEdit = (newText) => {
+    setEditableTranscription(newText);
+
+    // Track the first edit only
+    if (!hasTrackedEdit.current && newText !== webhookResponse?.transcription) {
+      hasTrackedEdit.current = true;
+      if (posthog?.capture) {
+        posthog.capture('note_edited_before_saving', {
+          screen: 'AddNotesScreen',
+          original_length: webhookResponse?.transcription?.length || 0,
+          edited_length: newText?.length || 0
+        });
+      }
+    }
+  };
+
   const handleCancelTranscription = () => {
+    // Track note cancelled event
+    if (posthog?.capture) {
+      posthog.capture('note_cancelled', {
+        screen: 'AddNotesScreen',
+        had_transcription: !!transcribedText,
+        was_edited: editableTranscription !== webhookResponse?.transcription
+      });
+    }
+
     setShowTranscriptionConfirmation(false);
     setTranscribedText('');
     setEditableTranscription('');
     setWebhookResponse(null);
     setRecordingStatus('ready');
+    hasTrackedEdit.current = false;
   };
 
   const resetState = () => {
@@ -338,6 +438,7 @@ export default function AddNotesScreen({ onClose }) {
     setIsProcessingLLM(false);
     setRecordingDuration(0);
     setIsRecording(false);
+    hasTrackedEdit.current = false;
   };
 
   const getStatusText = () => {
@@ -442,7 +543,7 @@ export default function AddNotesScreen({ onClose }) {
             <TextInput
               style={styles.textInput}
               value={editableTranscription}
-              onChangeText={setEditableTranscription}
+              onChangeText={handleTranscriptionEdit}
               multiline
               placeholder="Your transcribed text will appear here..."
               placeholderTextColor="#999"

@@ -3,9 +3,12 @@ import { posthog } from 'posthog-react-native';
 const subscribers = new Set();
 
 export const NOTE_SAVE_EVENT_TYPES = {
-  PLACEHOLDER_ADDED: 'PLACEHOLDER_ADDED',
-  PLACEHOLDER_HYDRATED: 'PLACEHOLDER_HYDRATED',
-  PLACEHOLDER_REMOVED: 'PLACEHOLDER_REMOVED'
+  PLACEHOLDER_ADDED: 'placeholder_added',
+  PLACEHOLDER_HYDRATED: 'placeholder_hydrated',
+  PLACEHOLDER_REMOVED: 'placeholder_removed',
+  NOTE_SAVED: 'note_saved',
+  EXTRACTION_COMPLETED: 'extraction_completed',
+  EXTRACTION_FOUND_NOTHING: 'extraction_found_nothing'
 };
 
 // Emit an event to both PostHog and all subscribers
@@ -44,9 +47,21 @@ const emitPlaceholderHydrated = (payload) =>
 const emitPlaceholderRemoved = (payload) =>
   emit({ type: NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_REMOVED, payload });
 
+const emitNoteSaved = (payload) =>
+  emit({ type: NOTE_SAVE_EVENT_TYPES.NOTE_SAVED, payload });
+
+const emitExtractionCompleted = (payload) =>
+  emit({ type: NOTE_SAVE_EVENT_TYPES.EXTRACTION_COMPLETED, payload });
+
+const emitExtractionFoundNothing = (payload) =>
+  emit({ type: NOTE_SAVE_EVENT_TYPES.EXTRACTION_FOUND_NOTHING, payload });
+
 export default {
   subscribe,
   emitPlaceholderAdded,
   emitPlaceholderHydrated,
-  emitPlaceholderRemoved
+  emitPlaceholderRemoved,
+  emitNoteSaved,
+  emitExtractionCompleted,
+  emitExtractionFoundNothing
 };

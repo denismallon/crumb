@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './supabase';
-import { posthog } from 'posthog-react-native';
+import { posthog, usePostHog } from 'posthog-react-native';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -22,12 +22,20 @@ const logWithTime = (message, ...args) => {
 };
 
 export default function LoginScreen() {
+  const posthogHook = usePostHog();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  // Track screen view on mount
+  useEffect(() => {
+    if (posthogHook?.screen) {
+      posthogHook.screen('LoginScreen');
+    }
+  }, [posthogHook]);
 
   const handleSendCode = async () => {
     if (!email.trim()) {
@@ -107,15 +115,22 @@ export default function LoginScreen() {
 
       logWithTime('✅ OTP verified successfully, session created');
 
-      // Identify user in PostHog
+      // Identify user and track login event in PostHog
       if (data.session.user) {
         try {
           if (posthog?.identify && typeof posthog.identify === 'function') {
             posthog.identify(data.session.user.id, {
-              email: data.session.user.email,
-              created_at: data.session.user.created_at
+              email: data.session.user.email
             });
             logWithTime('✅ User identified in PostHog:', data.session.user.id);
+          }
+
+          if (posthog?.capture) {
+            posthog.capture('user_logged_in', {
+              screen: 'LoginScreen',
+              method: 'email_otp'
+            });
+            logWithTime('✅ user_logged_in event tracked');
           }
         } catch (error) {
           // Silently fail if PostHog is not initialized yet

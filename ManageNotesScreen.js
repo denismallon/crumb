@@ -15,6 +15,7 @@ import {
   Linking
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import NoteSaveEvents, { NOTE_SAVE_EVENT_TYPES } from './NoteSaveEvents';
 
@@ -138,6 +139,7 @@ const ProcessingNoteCard = ({ note }) => {
 };
 
 export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
+  const posthog = usePostHog();
   const [savedEntries, setSavedEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(null);
@@ -151,6 +153,13 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [editingItemData, setEditingItemData] = useState(null);
   const [optimisticNotes, setOptimisticNotes] = useState([]);
+
+  // Track screen view on mount
+  useEffect(() => {
+    if (posthog?.screen) {
+      posthog.screen('ManageNotesScreen');
+    }
+  }, [posthog]);
 
   useEffect(() => {
     loadSavedEntries();
@@ -270,8 +279,15 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     try {
       setIsDeleting(entryId);
       const success = await StorageService.deleteFoodLogEntry(entryId);
-      
+
       if (success) {
+        // Track note deletion
+        if (posthog?.capture) {
+          posthog.capture('note_deleted', {
+            screen: 'ManageNotesScreen'
+          });
+        }
+
         // Remove from local state
         setSavedEntries(prev => prev.filter(entry => entry.id !== entryId));
         showAlert('Success', 'Note deleted successfully.');
@@ -541,6 +557,15 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                       const reactions = (editedReactions || []).filter(r => Object.values(r).some(v => (v || '').toString().trim() !== ''));
                       const success = await StorageService.updateFoodLogEntry(editingEntry.id, { foods, reactions });
                       if (success) {
+                        // Track note edit
+                        if (posthog?.capture) {
+                          posthog.capture('note_edited', {
+                            screen: 'ManageNotesScreen',
+                            foods_count: foods.length,
+                            reactions_count: reactions.length
+                          });
+                        }
+
                         await loadSavedEntries();
                         showAlert('Saved', 'Changes have been saved.', [
                           {

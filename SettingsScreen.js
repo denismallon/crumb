@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView
 } from 'react-native';
 import { useAuth } from './AuthContext';
+import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 
 const logWithTime = (message, ...args) => {
@@ -18,7 +19,15 @@ const logWithTime = (message, ...args) => {
 
 export default function SettingsScreen({ onClose }) {
   const { user, signOut } = useAuth();
+  const posthog = usePostHog();
   const [isWorking, setIsWorking] = useState(false);
+
+  // Track screen view on mount
+  useEffect(() => {
+    if (posthog?.screen) {
+      posthog.screen('SettingsScreen');
+    }
+  }, [posthog]);
 
   const exportData = async () => {
     try {

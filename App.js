@@ -25,7 +25,7 @@ if (Platform.OS === 'web') {
 
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { PostHogProvider } from 'posthog-react-native';
+import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { AuthProvider, useAuth } from './AuthContext';
 import LoginScreen from './LoginScreen';
 import SettingsScreen from './SettingsScreen';
@@ -133,10 +133,23 @@ if (typeof console !== 'undefined') {
 
 function AppContent() {
   const { session, loading } = useAuth();
+  const posthog = usePostHog();
   const [currentScreen, setCurrentScreen] = useState('manage'); // 'manage' | 'add' | 'settings'
 
+  // Track app opened on mount
   useEffect(() => {
     logWithTime(`App boot sequence started (${BOOT_LOG_ID})`);
+
+    // Track app opened event
+    if (posthog?.capture) {
+      posthog.capture('app_opened', {
+        screen: 'App',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [posthog]);
+
+  useEffect(() => {
     // Initialize background processing service
     // This will start processing any notes that were left in processing state
     if (session) {
@@ -192,7 +205,7 @@ export default function App() {
           host: posthogHost,
           enableSessionReplay: Platform.OS !== 'web',
         }}
-        autocapture
+        autocapture={false}
       >
         <AuthProvider>
           <AppContent />

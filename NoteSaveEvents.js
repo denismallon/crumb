@@ -21,9 +21,12 @@ const emit = (event) => {
 
   // Capture the event in PostHog
   try {
-    posthog.capture(event.type, event.payload);
+    if (posthog?.capture && typeof posthog.capture === 'function') {
+      posthog.capture(event.type, event.payload);
+    }
   } catch (error) {
-    console.error('PostHog capture error:', error);
+    // Silently fail if PostHog is not initialized
+    // This can happen during app initialization before PostHogProvider is ready
   }
 };
 

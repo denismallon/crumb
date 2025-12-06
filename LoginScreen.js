@@ -109,11 +109,17 @@ export default function LoginScreen() {
 
       // Identify user in PostHog
       if (data.session.user) {
-        posthog.identify(data.session.user.id, {
-          email: data.session.user.email,
-          created_at: data.session.user.created_at
-        });
-        logWithTime('✅ User identified in PostHog:', data.session.user.id);
+        try {
+          if (posthog?.identify && typeof posthog.identify === 'function') {
+            posthog.identify(data.session.user.id, {
+              email: data.session.user.email,
+              created_at: data.session.user.created_at
+            });
+            logWithTime('✅ User identified in PostHog:', data.session.user.id);
+          }
+        } catch (error) {
+          // Silently fail if PostHog is not initialized yet
+        }
       }
 
       // Session is automatically stored and managed by Supabase

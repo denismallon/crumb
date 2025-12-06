@@ -37,11 +37,17 @@ export const AuthProvider = ({ children }) => {
           setUser(currentSession.user);
 
           // Identify user in PostHog
-          posthog.identify(currentSession.user.id, {
-            email: currentSession.user.email,
-            created_at: currentSession.user.created_at
-          });
-          logWithTime('✅ User identified in PostHog:', currentSession.user.id);
+          try {
+            if (posthog?.identify && typeof posthog.identify === 'function') {
+              posthog.identify(currentSession.user.id, {
+                email: currentSession.user.email,
+                created_at: currentSession.user.created_at
+              });
+              logWithTime('✅ User identified in PostHog:', currentSession.user.id);
+            }
+          } catch (error) {
+            // Silently fail if PostHog is not initialized yet
+          }
         } else {
           logWithTime('ℹ️  No existing session found');
         }
@@ -65,19 +71,31 @@ export const AuthProvider = ({ children }) => {
           setUser(currentSession.user);
 
           // Identify user in PostHog on auth state changes
-          posthog.identify(currentSession.user.id, {
-            email: currentSession.user.email,
-            created_at: currentSession.user.created_at
-          });
-          logWithTime('✅ User identified in PostHog:', currentSession.user.id);
+          try {
+            if (posthog?.identify && typeof posthog.identify === 'function') {
+              posthog.identify(currentSession.user.id, {
+                email: currentSession.user.email,
+                created_at: currentSession.user.created_at
+              });
+              logWithTime('✅ User identified in PostHog:', currentSession.user.id);
+            }
+          } catch (error) {
+            // Silently fail if PostHog is not initialized yet
+          }
         } else {
           logWithTime('ℹ️  Session ended');
           setSession(null);
           setUser(null);
 
           // Reset PostHog identification on logout
-          posthog.reset();
-          logWithTime('✅ PostHog reset');
+          try {
+            if (posthog?.reset && typeof posthog.reset === 'function') {
+              posthog.reset();
+              logWithTime('✅ PostHog reset');
+            }
+          } catch (error) {
+            // Silently fail if PostHog is not initialized yet
+          }
         }
 
         setLoading(false);

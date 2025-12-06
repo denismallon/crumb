@@ -1,5 +1,30 @@
+// MUST be first - suppress warnings before any other imports
+import { Platform, LogBox } from 'react-native';
+
+if (Platform.OS === 'web') {
+  LogBox.ignoreAllLogs(true);
+  if (typeof console !== 'undefined') {
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    console.warn = function(...args) {
+      const msg = String(args[0] || '');
+      if (msg.includes('deprecated') || msg.includes('Text strings') || msg.includes('SafeAreaView')) {
+        return;
+      }
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      const msg = String(args[0] || '');
+      if (msg.includes('Text strings') || msg.includes('rendered within')) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
+  }
+}
+
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { PostHogProvider } from 'posthog-react-native';
 import { AuthProvider, useAuth } from './AuthContext';
 import LoginScreen from './LoginScreen';
@@ -7,6 +32,7 @@ import SettingsScreen from './SettingsScreen';
 import ManageNotesScreen from './ManageNotesScreen';
 import AddNotesScreen from './AddNotesScreen';
 import BackgroundProcessingService from './BackgroundProcessingService';
+import Constants from 'expo-constants';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -14,6 +40,96 @@ const logWithTime = (message, ...args) => {
 };
 
 const BOOT_LOG_ID = 'BOOT-2025-11-20-001';
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.log('ErrorBoundary caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={errorStyles.container}>
+          <Text style={errorStyles.title}>Something went wrong</Text>
+          <Text style={errorStyles.text}>{String(this.state.error?.message || 'Unknown error')}</Text>
+          <TouchableOpacity
+            style={errorStyles.button}
+            onPress={() => {
+              this.setState({ hasError: false, error: null });
+              if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
+            }}
+          >
+            <Text style={errorStyles.buttonText}>Reload App</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Error styles defined inline to avoid hoisting issues
+const errorStyles = {
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#dc3545',
+    marginBottom: 16,
+  },
+  text: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#FF986F',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+};
+
+// Debug trace for PostHog configuration
+const posthogKey = Constants.expoConfig?.extra?.posthogKey || process.env.EXPO_PUBLIC_POSTHOG_KEY || 'phc_kPyeAFr7w2UR4RZP1UVV2NzXSxumGTvzYbMr65BEyoO';
+const posthogHost = Constants.expoConfig?.extra?.posthogHost || process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
+
+if (typeof console !== 'undefined') {
+  console.log('🔍 [POSTHOG CONFIG DEBUG]');
+  console.log('  - Key from Constants.expoConfig.extra:', Constants.expoConfig?.extra?.posthogKey ? `${Constants.expoConfig.extra.posthogKey.substring(0, 15)}...` : 'undefined');
+  console.log('  - Key from process.env:', process.env.EXPO_PUBLIC_POSTHOG_KEY ? `${process.env.EXPO_PUBLIC_POSTHOG_KEY.substring(0, 15)}...` : 'undefined');
+  console.log('  - Final posthogKey:', posthogKey ? `${posthogKey.substring(0, 15)}...` : 'undefined');
+  console.log('  - Host from Constants.expoConfig.extra:', Constants.expoConfig?.extra?.posthogHost || 'undefined');
+  console.log('  - Host from process.env:', process.env.EXPO_PUBLIC_POSTHOG_HOST || 'undefined');
+  console.log('  - Final posthogHost:', posthogHost || 'undefined');
+  console.log('  - Platform:', Platform.OS);
+  console.log('  - Session Replay enabled:', Platform.OS !== 'web');
+}
 
 function AppContent() {
   const { session, loading } = useAuth();
@@ -69,18 +185,20 @@ function AppContent() {
 
 export default function App() {
   return (
-    <PostHogProvider
-      apiKey="phc_kPyeAFr7w2UR4RZP1UVV2NzXSxumGTvzYbMr65BEyoO"
-      options={{
-        host: 'https://eu.i.posthog.com',
-        enableSessionReplay: true,
-      }}
-      autocapture
-    >
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </PostHogProvider>
+    <ErrorBoundary>
+      <PostHogProvider
+        apiKey={posthogKey}
+        options={{
+          host: posthogHost,
+          enableSessionReplay: Platform.OS !== 'web',
+        }}
+        autocapture
+      >
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </PostHogProvider>
+    </ErrorBoundary>
   );
 }
 

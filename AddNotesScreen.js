@@ -409,6 +409,20 @@ export default function AddNotesScreen({ onClose }) {
     }
   };
 
+  const handleClose = () => {
+    // Track recording screen closed event
+    if (posthog?.capture) {
+      posthog.capture('recording_closed', {
+        screen: 'AddNotesScreen',
+        had_recording: recordingDuration > 0,
+        had_transcription: !!transcribedText,
+        recording_status: recordingStatus
+      });
+    }
+
+    onClose();
+  };
+
   const handleCancelTranscription = () => {
     // Track note cancelled event
     if (posthog?.capture) {
@@ -472,7 +486,7 @@ export default function AddNotesScreen({ onClose }) {
       <ExpoStatusBar style="auto" />
       
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Add New Note</Text>

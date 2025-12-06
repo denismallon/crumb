@@ -601,6 +601,13 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                             const success = await StorageService.deleteFoodLogEntry(editingEntry.id);
                             setIsDeleting(null);
                             if (success) {
+                              // Track note deletion
+                              if (posthog?.capture) {
+                                posthog.capture('note_deleted', {
+                                  screen: 'ManageNotesScreen'
+                                });
+                              }
+
                               await loadSavedEntries();
                               setEditModalVisible(false);
                               setEditingEntry(null);

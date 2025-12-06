@@ -1,4 +1,5 @@
 import StorageService from './StorageService';
+import NoteSaveEvents from './NoteSaveEvents';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -146,12 +147,25 @@ class BackgroundProcessingService {
       
       // Update the note with extraction results
       const success = await StorageService.updateNoteWithExtraction(entryId, extractedData);
-      
+
       if (success) {
         const foodCount = extractedData.foods ? extractedData.foods.length : 0;
         const reactionCount = extractedData.reactions ? extractedData.reactions.length : 0;
         logWithTime(`Successfully processed note ${entryId}: ${foodCount} foods, ${reactionCount} reactions`);
-        
+
+        // Track extraction result
+        if (foodCount > 0 || reactionCount > 0) {
+          NoteSaveEvents.emitExtractionCompleted({
+            foods_count: foodCount,
+            reactions_count: reactionCount,
+            screen: 'BackgroundProcessingService'
+          });
+        } else {
+          NoteSaveEvents.emitExtractionFoundNothing({
+            screen: 'BackgroundProcessingService'
+          });
+        }
+
         // Trigger notification (this would be implemented based on your notification system)
         this.triggerProcessingCompleteNotification(entryId, foodCount, reactionCount);
       } else {

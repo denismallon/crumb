@@ -1,4 +1,5 @@
-export default {
+export default ({ config }) => ({
+  ...config,
   expo: {
     name: "Crumb",
     slug: "crumb-food-tracker",
@@ -70,4 +71,4 @@ export default {
       "expo-localization"
     ]
   }
-};
+});

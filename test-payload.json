@@ -1,0 +1,186 @@
+{
+  "user_id": "test-user-123",
+  "entries": [
+    {
+      "timestamp": "2025-01-15T12:30:00Z",
+      "foods": [
+        {"name": "black beans", "mealType": "lunch", "quantity": "half cup"},
+        {"name": "rice", "mealType": "lunch", "quantity": "1 cup"},
+        {"name": "avocado", "mealType": "lunch", "quantity": "quarter"}
+      ],
+      "reactions": [{"type": "skin", "severity": "moderate", "description": "itchy rash on arms and chest", "reactionDelayMinutes": 30}]
+    },
+    {
+      "timestamp": "2025-01-16T18:00:00Z",
+      "foods": [
+        {"name": "lentil soup", "mealType": "dinner", "quantity": "1 bowl"},
+        {"name": "bread", "mealType": "dinner", "quantity": "1 slice"},
+        {"name": "carrots", "mealType": "dinner", "quantity": "handful"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-01-18T13:00:00Z",
+      "foods": [
+        {"name": "green peas", "mealType": "lunch", "quantity": "handful"},
+        {"name": "mashed potatoes", "mealType": "lunch", "quantity": "1 cup"},
+        {"name": "chicken breast", "mealType": "lunch", "quantity": "small piece"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-01-20T19:30:00Z",
+      "foods": [
+        {"name": "kidney beans", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "tomato sauce", "mealType": "dinner", "quantity": "half cup"},
+        {"name": "pasta", "mealType": "dinner", "quantity": "1 bowl"}
+      ],
+      "reactions": [{"type": "skin", "severity": "severe", "description": "itchy rash covering arms, chest, and back", "reactionDelayMinutes": 25}]
+    },
+    {
+      "timestamp": "2025-01-22T12:00:00Z",
+      "foods": [
+        {"name": "chickpeas", "mealType": "lunch", "quantity": "half cup"},
+        {"name": "cucumber", "mealType": "lunch", "quantity": "quarter"},
+        {"name": "olive oil", "mealType": "lunch", "quantity": "drizzle"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-01-24T17:45:00Z",
+      "foods": [
+        {"name": "split pea soup", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "crackers", "mealType": "dinner", "quantity": "5 pieces"},
+        {"name": "cheese", "mealType": "dinner", "quantity": "small cube"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-01-26T13:15:00Z",
+      "foods": [
+        {"name": "baked beans", "mealType": "lunch", "quantity": "3 tablespoons"},
+        {"name": "toast", "mealType": "lunch", "quantity": "1 slice"},
+        {"name": "scrambled eggs", "mealType": "lunch", "quantity": "1 egg"}
+      ],
+      "reactions": [{"type": "skin", "severity": "mild", "description": "itchy rash on forearms", "reactionDelayMinutes": 35}]
+    },
+    {
+      "timestamp": "2025-01-28T12:30:00Z",
+      "foods": [
+        {"name": "red lentils", "mealType": "lunch", "quantity": "half cup"},
+        {"name": "spinach", "mealType": "lunch", "quantity": "handful"},
+        {"name": "yogurt", "mealType": "lunch", "quantity": "small bowl"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-01-30T14:00:00Z",
+      "foods": [
+        {"name": "green beans", "mealType": "snack", "quantity": "handful"},
+        {"name": "apple slices", "mealType": "snack", "quantity": "half apple"},
+        {"name": "cheese stick", "mealType": "snack", "quantity": "1 piece"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-01T18:30:00Z",
+      "foods": [
+        {"name": "white beans", "mealType": "dinner", "quantity": "quarter cup"},
+        {"name": "roasted vegetables", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "quinoa", "mealType": "dinner", "quantity": "half cup"}
+      ],
+      "reactions": [{"type": "skin", "severity": "mild", "description": "itchy rash on upper arms", "reactionDelayMinutes": 40}]
+    },
+    {
+      "timestamp": "2025-02-03T13:00:00Z",
+      "foods": [
+        {"name": "yellow split peas", "mealType": "lunch", "quantity": "1 bowl"},
+        {"name": "naan bread", "mealType": "lunch", "quantity": "1 piece"},
+        {"name": "cucumber raita", "mealType": "lunch", "quantity": "small bowl"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-05T19:00:00Z",
+      "foods": [
+        {"name": "hummus", "mealType": "dinner", "quantity": "3 tablespoons"},
+        {"name": "pita bread", "mealType": "dinner", "quantity": "1 piece"},
+        {"name": "bell peppers", "mealType": "dinner", "quantity": "handful"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-07T12:15:00Z",
+      "foods": [
+        {"name": "pinto beans", "mealType": "lunch", "quantity": "three-quarter cup"},
+        {"name": "tortilla", "mealType": "lunch", "quantity": "1 large"},
+        {"name": "salsa", "mealType": "lunch", "quantity": "2 tablespoons"}
+      ],
+      "reactions": [{"type": "skin", "severity": "moderate", "description": "itchy rash on arms, neck, and upper chest", "reactionDelayMinutes": 28}]
+    },
+    {
+      "timestamp": "2025-02-08T17:30:00Z",
+      "foods": [
+        {"name": "garden peas", "mealType": "dinner", "quantity": "side portion"},
+        {"name": "salmon", "mealType": "dinner", "quantity": "small fillet"},
+        {"name": "sweet potato", "mealType": "dinner", "quantity": "1 medium"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-09T13:45:00Z",
+      "foods": [
+        {"name": "green lentils", "mealType": "lunch", "quantity": "half cup"},
+        {"name": "couscous", "mealType": "lunch", "quantity": "half cup"},
+        {"name": "feta cheese", "mealType": "lunch", "quantity": "small cube"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-10T12:00:00Z",
+      "foods": [
+        {"name": "navy beans", "mealType": "lunch", "quantity": "few tablespoons"},
+        {"name": "kale", "mealType": "lunch", "quantity": "handful"},
+        {"name": "garlic bread", "mealType": "lunch", "quantity": "1 slice"}
+      ],
+      "reactions": [{"type": "skin", "severity": "mild", "description": "itchy rash on forearms", "reactionDelayMinutes": 33}]
+    },
+    {
+      "timestamp": "2025-02-11T14:30:00Z",
+      "foods": [
+        {"name": "snap peas", "mealType": "snack", "quantity": "handful"},
+        {"name": "crackers", "mealType": "snack", "quantity": "3 pieces"},
+        {"name": "grapes", "mealType": "snack", "quantity": "small bunch"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-12T18:15:00Z",
+      "foods": [
+        {"name": "edamame", "mealType": "dinner", "quantity": "small bowl"},
+        {"name": "sushi rice", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "seaweed", "mealType": "dinner", "quantity": "2 sheets"}
+      ],
+      "reactions": []
+    },
+    {
+      "timestamp": "2025-02-13T13:00:00Z",
+      "foods": [
+        {"name": "lima beans", "mealType": "lunch", "quantity": "1 tablespoon"},
+        {"name": "vegetable soup", "mealType": "lunch", "quantity": "1 bowl"},
+        {"name": "crackers", "mealType": "lunch", "quantity": "4 pieces"}
+      ],
+      "reactions": [{"type": "skin", "severity": "very mild", "description": "slight itchiness on arms", "reactionDelayMinutes": 45}]
+    },
+    {
+      "timestamp": "2025-02-14T19:30:00Z",
+      "foods": [
+        {"name": "brown lentils", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "roasted cauliflower", "mealType": "dinner", "quantity": "1 cup"},
+        {"name": "tahini sauce", "mealType": "dinner", "quantity": "2 tablespoons"}
+      ],
+      "reactions": []
+    }
+  ],
+  "date_range": "all"
+}

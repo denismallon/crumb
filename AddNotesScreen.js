@@ -18,6 +18,7 @@ import StorageService from './StorageService';
 import BackgroundProcessingService from './BackgroundProcessingService';
 import NoteSaveEvents from './NoteSaveEvents';
 
+// Adding timestamps to console output
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
   console.log(`[${timestamp}]`, message, ...args);

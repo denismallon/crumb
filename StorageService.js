@@ -367,13 +367,32 @@ class StorageService {
    */
   async clearAllData() {
     try {
+      logWithTime('Starting clearAllData...');
+
+      // Get all keys for debugging
+      const allKeys = await AsyncStorage.getAllKeys();
+      logWithTime('All AsyncStorage keys before clear:', allKeys);
+
+      // Remove food logs
+      logWithTime('Removing FOOD_LOGS key:', this.STORAGE_KEYS.FOOD_LOGS);
       await AsyncStorage.removeItem(this.STORAGE_KEYS.FOOD_LOGS);
-      await this.initializeMetadata(); // Reset metadata
-      
-      logWithTime('All data cleared successfully');
+
+      // Reset metadata
+      logWithTime('Resetting metadata...');
+      await this.initializeMetadata();
+
+      // Verify deletion
+      const remainingKeys = await AsyncStorage.getAllKeys();
+      logWithTime('Remaining AsyncStorage keys after clear:', remainingKeys);
+
+      logWithTime('✅ All data cleared successfully');
       return true;
     } catch (error) {
-      console.error('Failed to clear data:', error);
+      console.error('❌ Failed to clear data:', error);
+      logWithTime('Clear data error details:', {
+        message: error.message,
+        stack: error.stack
+      });
       return false;
     }
   }

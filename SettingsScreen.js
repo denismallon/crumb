@@ -47,6 +47,7 @@ export default function SettingsScreen({ onClose }) {
   };
 
   const clearAllData = async () => {
+    logWithTime('Clear data button clicked');
     Alert.alert(
       'Clear All Data',
       'This will delete all saved entries. Continue?',
@@ -56,13 +57,21 @@ export default function SettingsScreen({ onClose }) {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
-            setIsWorking(true);
-            const success = await StorageService.clearAllData();
-            setIsWorking(false);
-            if (success) {
-              Alert.alert('Done', 'All data cleared.');
-            } else {
-              Alert.alert('Error', 'Failed to clear data.');
+            try {
+              logWithTime('Clear data confirmed, starting...');
+              setIsWorking(true);
+              const success = await StorageService.clearAllData();
+              logWithTime('Clear data result:', { success });
+              setIsWorking(false);
+              if (success) {
+                Alert.alert('Done', 'All data cleared.');
+              } else {
+                Alert.alert('Error', 'Failed to clear data.');
+              }
+            } catch (error) {
+              logWithTime('Clear data error:', error);
+              setIsWorking(false);
+              Alert.alert('Error', `Failed to clear data: ${error.message}`);
             }
           }
         }

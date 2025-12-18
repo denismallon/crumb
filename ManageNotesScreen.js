@@ -240,7 +240,17 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       setOptimisticNotes((prev) => {
         if (!prev.length) return prev;
         const entryIds = new Set(currentEntries.map((entry) => entry.id));
-        return prev.filter((note) => !note.entryId || !entryIds.has(note.entryId));
+        return prev.filter((note) => {
+          // Keep skeleton notes (no entryId yet - still saving)
+          if (!note.entryId) return true;
+
+          // Keep processing notes even if they're not in savedEntries yet
+          // This prevents the polling from removing the loader during the 5-8 second processing window
+          if (note.status === 'processing') return true;
+
+          // Remove notes that are now in savedEntries (processing complete)
+          return !entryIds.has(note.entryId);
+        });
       });
       
       // Get processing notes

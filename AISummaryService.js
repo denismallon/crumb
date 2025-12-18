@@ -145,53 +145,79 @@ class AISummaryService {
 
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
+      // Get response as text first for better error logging
+      const responseText = await response.text();
+      logWithTime('📥 Raw webhook response:', responseText.substring(0, 200) + '...');
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Webhook failed: ${response.status} - ${responseText.substring(0, 200)}`);
       }
 
-      const rawResponse = await response.json();
+      // Parse JSON with error handling
+      let rawResponse;
+      try {
+        rawResponse = JSON.parse(responseText);
+        logWithTime('📋 Parsed response structure:', {
+          isArray: Array.isArray(rawResponse),
+          hasChoices: !!rawResponse?.choices || !!(Array.isArray(rawResponse) && rawResponse[0]?.choices),
+          keys: Array.isArray(rawResponse) ? Object.keys(rawResponse[0] || {}) : Object.keys(rawResponse)
+        });
+      } catch (e) {
+        throw new Error(`Failed to parse JSON: ${e.message}`);
+      }
 
-      // Parse OpenAI chat completion format
-      // Handle both array wrapper and direct object
-      // Expected formats:
-      // 1. [{ choices: [{ message: { content: { summary_markdown: "..." } } }] }]
-      // 2. { choices: [{ message: { content: { summary_markdown: "..." } } }] }
+      // Handle various response formats
       let summaryMarkdown = null;
+      let entryCount = entries.length;
+      let generatedAt = new Date().toISOString();
+      let model = 'unknown';
+      let responseId = null;
+
+      // Format 1: OpenAI chat completion format (array or object)
       let responseData = Array.isArray(rawResponse) ? rawResponse[0] : rawResponse;
 
       if (responseData.choices && responseData.choices.length > 0) {
+        // OpenAI format: { choices: [{ message: { content: ... } }] }
         const content = responseData.choices[0].message?.content;
 
         if (typeof content === 'string') {
-          // If content is already a string, use it directly
           summaryMarkdown = content;
         } else if (content?.summary_markdown) {
-          // If content is an object with summary_markdown field
           summaryMarkdown = content.summary_markdown;
         } else if (content?.medical_summary_markdown) {
-          // Alternative field name
           summaryMarkdown = content.medical_summary_markdown;
         }
+
+        model = responseData.model || 'unknown';
+        responseId = responseData.id;
+      }
+      // Format 2: Simple n8n format { summary: "...", generated_at: "...", entry_count: ... }
+      else if (rawResponse.summary || rawResponse.message || rawResponse.content) {
+        summaryMarkdown = rawResponse.summary || rawResponse.message || rawResponse.content;
+        entryCount = rawResponse.entry_count || entries.length;
+        generatedAt = rawResponse.generated_at || generatedAt;
       }
 
-      if (!summaryMarkdown) {
-        console.error('Raw response structure:', JSON.stringify(rawResponse, null, 2));
-        throw new Error('Invalid response format: missing summary content');
+      // Validate we got a summary
+      if (!summaryMarkdown || summaryMarkdown.trim().length === 0) {
+        console.error('❌ Failed to extract summary from response:', JSON.stringify(rawResponse, null, 2));
+        throw new Error('Response missing summary content');
       }
 
       // Format the response data consistently for storage
       const formattedData = {
         summary: summaryMarkdown,
-        entry_count: entries.length,
-        generated_at: new Date().toISOString(),
-        model: responseData.model || 'unknown',
-        raw_response_id: responseData.id
+        entry_count: entryCount,
+        generated_at: generatedAt,
+        model: model,
+        raw_response_id: responseId
       };
 
       logWithTime('✅ AI summary generated:', {
         entry_count: formattedData.entry_count,
         generated_at: formattedData.generated_at,
-        model: formattedData.model
+        model: formattedData.model,
+        summary_length: summaryMarkdown.length
       });
 
       // Save to local storage

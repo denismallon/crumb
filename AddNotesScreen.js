@@ -348,14 +348,12 @@ export default function AddNotesScreen({ onClose }) {
       });
     }
 
-    // Immediately close modal for seamless UX
-    resetState();
-    onClose();
-    
     try {
+      // Save note BEFORE closing modal - this allows events to be processed while modal is still open
       const saveResult = await StorageService.saveNoteForProcessing(entryData);
-      
+
       if (saveResult?.success) {
+        // Emit PLACEHOLDER_HYDRATED while modal is still open
         NoteSaveEvents.emitPlaceholderHydrated({
           tempId,
           entryId: saveResult.entryId,
@@ -363,9 +361,10 @@ export default function AddNotesScreen({ onClose }) {
           timestamp: entryData.timestamp || placeholderTimestamp,
           source: entryData.source
         });
+
         try {
           await BackgroundProcessingService.addToProcessingQueue(
-            saveResult.entryId, 
+            saveResult.entryId,
             {
               audioUri: audioUri,
               duration: recordingDuration,
@@ -373,17 +372,20 @@ export default function AddNotesScreen({ onClose }) {
             }
           );
         } catch (queueError) {
-          setWebhookError('Processing queue is busy. We’ll keep trying.');
+          setWebhookError('Processing queue is busy. We will keep trying.');
         }
       } else {
-        setWebhookError('We couldn’t save your note. Please try again.');
+        setWebhookError('We could not save your note. Please try again.');
         NoteSaveEvents.emitPlaceholderRemoved({ tempId });
       }
     } catch (error) {
-      setWebhookError('We couldn’t save your note. Please try again.');
+      setWebhookError('We could not save your note. Please try again.');
       NoteSaveEvents.emitPlaceholderRemoved({ tempId });
     } finally {
       setIsProcessingLLM(false);
+      // Close modal AFTER all events have been emitted and processing has started
+      resetState();
+      onClose();
     }
   };
   

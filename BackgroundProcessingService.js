@@ -1,14 +1,15 @@
 import StorageService from './StorageService';
 import NoteSaveEvents from './NoteSaveEvents';
+import Constants from 'expo-constants';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
   console.log(`[${timestamp}]`, message, ...args);
 };
 
-// Webhook URLs for easy maintenance and debugging
-const WEBHOOK_URLS = {
-  EXTRACTION: 'https://primary-production-97918.up.railway.app/webhook/fab624fa-c5e7-4439-b39c-3a7e13cca74f'
+// Get webhook URL from environment
+const getExtractionWebhookUrl = () => {
+  return Constants.expoConfig?.extra?.extractWebhookUrl || process.env.EXPO_PUBLIC_EXTRACT_WEBHOOK_URL;
 };
 
 class BackgroundProcessingService {
@@ -102,7 +103,8 @@ class BackgroundProcessingService {
       });
       
       // Send transcription to LLM extraction webhook
-      const extractionFetchPromise = fetch(WEBHOOK_URLS.EXTRACTION, {
+      const webhookUrl = getExtractionWebhookUrl();
+      const extractionFetchPromise = fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

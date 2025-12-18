@@ -18,6 +18,7 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import NoteSaveEvents, { NOTE_SAVE_EVENT_TYPES } from './NoteSaveEvents';
+import AISummaryScreen from './AISummaryScreen';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -149,6 +150,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editedReactions, setEditedReactions] = useState([]);
   const [processingNotes, setProcessingNotes] = useState([]);
   const [editItemModalVisible, setEditItemModalVisible] = useState(false);
+  const [aiSummaryModalVisible, setAiSummaryModalVisible] = useState(false);
   const [editingItemType, setEditingItemType] = useState(null); // 'food' or 'reaction'
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [editingItemData, setEditingItemData] = useState(null);
@@ -344,9 +346,21 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
         {/* Notes List */}
         <View style={styles.notesSection}>
           {savedEntries.length > 0 && (
-            <Text style={styles.sectionTitle}>You have {savedEntries.length} notes</Text>
+            <View style={styles.notesSectionHeader}>
+              <Text style={styles.sectionTitle}>You have {savedEntries.length} notes</Text>
+              <Text style={styles.sectionSubtitle}>Keep adding more notes whenever you can - the more we record, the more patterns will emerge</Text>
+            </View>
           )}
-          
+          {savedEntries.length > 0 && (
+            <TouchableOpacity
+              style={styles.aiSummaryButton}
+              onPress={() => setAiSummaryModalVisible(true)}
+              accessibilityLabel="Generate AI Summary"
+            >
+              <Text style={styles.aiSummaryButtonText}>🧠 Generate summary</Text>
+            </TouchableOpacity>
+          )}
+
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#007bff" />
@@ -720,6 +734,16 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
         </View>
       </Modal>
 
+      {/* AI Summary Modal */}
+      <Modal
+        visible={aiSummaryModalVisible}
+        animationType="none"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setAiSummaryModalVisible(false)}
+      >
+        <AISummaryScreen onClose={() => setAiSummaryModalVisible(false)} />
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -784,7 +808,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2c3e50',
-    marginBottom: 15,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6c757d',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 12,
   },
   // removed data-management controls styles
   notesSection: {
@@ -1333,5 +1365,23 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     textAlign: 'center',
     textDecorationLine: 'underline',
+  },
+  notesSectionHeader: {
+    marginBottom: 8,
+  },
+  aiSummaryButton: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  aiSummaryButtonText: {
+    color: '#666666',
+    fontSize: 14,
+    fontWeight: '400',
   },
 });

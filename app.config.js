@@ -65,7 +65,10 @@ export default ({ config }) => ({
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,
-      posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST
+      posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+      summaryWebhookUrl: process.env.EXPO_PUBLIC_SUMMARY_WEBHOOK_URL,
+      extractWebhookUrl: process.env.EXPO_PUBLIC_EXTRACT_WEBHOOK_URL,
+      transcribeWebhookUrl: process.env.EXPO_PUBLIC_TRANSCRIBE_WEBHOOK_URL
     },
     plugins: [
       "expo-localization"

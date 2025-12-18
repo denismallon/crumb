@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import BackgroundProcessingService from './BackgroundProcessingService';
@@ -22,10 +23,9 @@ const logWithTime = (message, ...args) => {
   console.log(`[${timestamp}]`, message, ...args);
 };
 
-// Webhook URLs for easy maintenance and debugging
-const WEBHOOK_URLS = {
-  TRANSCRIPTION: 'https://primary-production-97918.up.railway.app/webhook/e463b9ed-7503-460b-b7ba-75dbb17e06f8',
-  EXTRACTION: 'https://primary-production-97918.up.railway.app/webhook/fab624fa-c5e7-4439-b39c-3a7e13cca74f'
+// Get webhook URL from environment
+const getTranscriptionWebhookUrl = () => {
+  return Constants.expoConfig?.extra?.transcribeWebhookUrl || process.env.EXPO_PUBLIC_TRANSCRIBE_WEBHOOK_URL;
 };
 
 export default function AddNotesScreen({ onClose }) {
@@ -221,7 +221,8 @@ export default function AddNotesScreen({ onClose }) {
         }, 30000);
       });
       
-      const fetchPromise = fetch(WEBHOOK_URLS.TRANSCRIPTION, {
+      const webhookUrl = getTranscriptionWebhookUrl();
+      const fetchPromise = fetch(webhookUrl, {
         method: 'POST',
         body: formData
       });

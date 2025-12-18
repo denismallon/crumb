@@ -65,9 +65,11 @@ const showAlert = (title, message, buttons = [{ text: 'OK' }], options) => {
 };
 
 const SkeletonNoteCard = ({ tempId }) => {
+  logWithTime('[ManageNotesScreen] SkeletonNoteCard RENDERING', { tempId });
   const shimmer = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
+    logWithTime('[ManageNotesScreen] SkeletonNoteCard animation starting', { tempId });
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmer, {
@@ -83,7 +85,10 @@ const SkeletonNoteCard = ({ tempId }) => {
       ])
     );
     animation.start();
-    return () => animation.stop();
+    return () => {
+      logWithTime('[ManageNotesScreen] SkeletonNoteCard animation stopping', { tempId });
+      animation.stop();
+    };
   }, [shimmer]);
 
   useEffect(() => {
@@ -179,23 +184,26 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       switch (type) {
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_ADDED:
           logWithTime('[ManageNotesScreen] Adding skeleton placeholder', { tempId: payload?.tempId });
-          setOptimisticNotes((prev) => [
-            {
+          setOptimisticNotes((prev) => {
+            const newNote = {
               tempId: payload?.tempId,
               status: 'skeleton',
               timestamp: payload?.timestamp,
               source: payload?.source || 'voice'
-            },
-            ...prev.filter((note) => note.tempId !== payload?.tempId)
-          ]);
+            };
+            const filtered = prev.filter((note) => note.tempId !== payload?.tempId);
+            const updated = [newNote, ...filtered];
+            logWithTime('[ManageNotesScreen] optimisticNotes updated, count:', updated.length, 'new note:', newNote);
+            return updated;
+          });
           break;
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_HYDRATED:
           logWithTime('[ManageNotesScreen] Hydrating placeholder', {
             tempId: payload?.tempId,
             entryId: payload?.entryId
           });
-          setOptimisticNotes((prev) =>
-            prev.map((note) =>
+          setOptimisticNotes((prev) => {
+            const updated = prev.map((note) =>
               note.tempId === payload?.tempId
                 ? {
                     ...note,
@@ -206,8 +214,10 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                     source: payload?.source || note.source
                   }
                 : note
-            )
-          );
+            );
+            logWithTime('[ManageNotesScreen] After hydration, optimisticNotes count:', updated.length);
+            return updated;
+          });
           break;
         case NOTE_SAVE_EVENT_TYPES.PLACEHOLDER_REMOVED:
           logWithTime('[ManageNotesScreen] Removing placeholder', { tempId: payload?.tempId });
@@ -374,16 +384,18 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
             </View>
           ) : (
             <View style={styles.entriesContainer}>
-              {optimisticNotes.map((note) =>
-                note.status === 'skeleton' ? (
+              {optimisticNotes.length > 0 && logWithTime('[ManageNotesScreen] Rendering optimisticNotes:', optimisticNotes.length, optimisticNotes)}
+              {optimisticNotes.map((note) => {
+                logWithTime('[ManageNotesScreen] Rendering note:', note.tempId, 'status:', note.status);
+                return note.status === 'skeleton' ? (
                   <SkeletonNoteCard key={note.tempId} tempId={note.tempId} />
                 ) : (
                   <ProcessingNoteCard
                     key={note.tempId}
                     note={note}
                   />
-                )
-              )}
+                );
+              })}
               {savedEntries.map((entry) => {
                 const isProcessing = entry.processingStatus === 'processing';
                 return (

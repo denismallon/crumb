@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
@@ -46,6 +48,44 @@ export default function SettingsScreen({ onClose }) {
     }
   };
 
+  const handleClearData = async () => {
+    logWithTime('Clear data clicked, platform:', Platform.OS);
+    try {
+      setIsWorking(true);
+
+      if (Platform.OS === 'web') {
+        // Web-specific: clear localStorage directly
+        logWithTime('Using web localStorage clear');
+
+        // Get keys before clearing for debugging
+        const keysBefore = Object.keys(localStorage);
+        logWithTime('localStorage keys before clear:', keysBefore);
+
+        localStorage.clear();
+
+        // Verify clear
+        const keysAfter = Object.keys(localStorage);
+        logWithTime('localStorage keys after clear:', keysAfter);
+        logWithTime('✅ localStorage cleared');
+      } else {
+        // Native: use AsyncStorage
+        logWithTime('Using native AsyncStorage clear');
+        const keys = await AsyncStorage.getAllKeys();
+        logWithTime('AsyncStorage keys found:', keys);
+        await AsyncStorage.multiRemove(keys);
+        logWithTime('✅ AsyncStorage cleared');
+      }
+
+      setIsWorking(false);
+      Alert.alert('Done', 'All data cleared successfully.');
+    } catch (error) {
+      logWithTime('❌ Clear data error:', error);
+      console.error('Clear data error:', error);
+      setIsWorking(false);
+      Alert.alert('Error', `Failed to clear data: ${error.message}`);
+    }
+  };
+
   const clearAllData = async () => {
     logWithTime('Clear data button clicked');
     Alert.alert(
@@ -56,24 +96,7 @@ export default function SettingsScreen({ onClose }) {
         {
           text: 'Clear',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              logWithTime('Clear data confirmed, starting...');
-              setIsWorking(true);
-              const success = await StorageService.clearAllData();
-              logWithTime('Clear data result:', { success });
-              setIsWorking(false);
-              if (success) {
-                Alert.alert('Done', 'All data cleared.');
-              } else {
-                Alert.alert('Error', 'Failed to clear data.');
-              }
-            } catch (error) {
-              logWithTime('Clear data error:', error);
-              setIsWorking(false);
-              Alert.alert('Error', `Failed to clear data: ${error.message}`);
-            }
-          }
+          onPress: handleClearData
         }
       ]
     );

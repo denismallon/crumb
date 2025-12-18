@@ -49,7 +49,7 @@ export default function SettingsScreen({ onClose }) {
   };
 
   const handleClearData = async () => {
-    logWithTime('Clear data clicked, platform:', Platform.OS);
+    logWithTime('Clear data operation starting, platform:', Platform.OS);
     try {
       setIsWorking(true);
 
@@ -77,29 +77,54 @@ export default function SettingsScreen({ onClose }) {
       }
 
       setIsWorking(false);
-      Alert.alert('Done', 'All data cleared successfully.');
+
+      // Platform-specific success message
+      if (Platform.OS === 'web') {
+        window.alert('All data cleared successfully.');
+      } else {
+        Alert.alert('Done', 'All data cleared successfully.');
+      }
     } catch (error) {
       logWithTime('❌ Clear data error:', error);
       console.error('Clear data error:', error);
       setIsWorking(false);
-      Alert.alert('Error', `Failed to clear data: ${error.message}`);
+
+      // Platform-specific error message
+      if (Platform.OS === 'web') {
+        window.alert(`Failed to clear data: ${error.message}`);
+      } else {
+        Alert.alert('Error', `Failed to clear data: ${error.message}`);
+      }
     }
   };
 
   const clearAllData = async () => {
     logWithTime('Clear data button clicked');
-    Alert.alert(
-      'Clear All Data',
-      'This will delete all saved entries. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: handleClearData
-        }
-      ]
-    );
+
+    // Platform-specific confirmation dialog
+    if (Platform.OS === 'web') {
+      // Use window.confirm on web
+      const confirmed = window.confirm('Clear All Data\n\nThis will delete all saved entries. Continue?');
+      logWithTime('Web confirmation result:', confirmed);
+
+      if (confirmed) {
+        await handleClearData();
+      }
+    } else {
+      // Use Alert.alert on native
+      Alert.alert(
+        'Clear All Data',
+        'This will delete all saved entries. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Clear',
+            style: 'destructive',
+            onPress: handleClearData
+          }
+        ]
+      );
+    }
   };
 
   const handleLogout = async () => {

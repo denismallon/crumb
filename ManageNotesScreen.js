@@ -14,11 +14,31 @@ import {
   Animated,
   Linking
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import NoteSaveEvents, { NOTE_SAVE_EVENT_TYPES } from './NoteSaveEvents';
 import AISummaryScreen from './AISummaryScreen';
+
+// Motivational phrases to rotate
+const MOTIVATIONAL_PHRASES = [
+  'Every note helps',
+  'One day at a time',
+  'Progress, not perfection',
+  'You\'ve got this',
+  'These things take time',
+  'Small details matter',
+  'Each entry counts',
+  'Learning as you go',
+  'Trust the process',
+  'Small wins add up',
+  'Understanding takes patience',
+  'Step by step',
+  'Watching and learning'
+];
+
+const RECENT_PHRASES_KEY = 'recent_motivational_phrases';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -160,13 +180,47 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [editingItemData, setEditingItemData] = useState(null);
   const [optimisticNotes, setOptimisticNotes] = useState([]);
+  const [motivationalPhrase, setMotivationalPhrase] = useState('Every note helps');
 
-  // Track screen view on mount
+  // Track screen view on mount and load motivational phrase
   useEffect(() => {
     if (posthog?.screen) {
       posthog.screen('ManageNotesScreen');
     }
+    loadMotivationalPhrase();
   }, [posthog]);
+
+  // Load and rotate motivational phrase
+  const loadMotivationalPhrase = async () => {
+    try {
+      // Get recently shown phrases
+      const recentJson = await AsyncStorage.getItem(RECENT_PHRASES_KEY);
+      const recentIndices = recentJson ? JSON.parse(recentJson) : [];
+
+      // Find phrases that haven't been shown recently
+      const availableIndices = MOTIVATIONAL_PHRASES
+        .map((_, index) => index)
+        .filter(index => !recentIndices.includes(index));
+
+      // If all phrases have been shown recently, reset and use all phrases
+      const candidateIndices = availableIndices.length > 0 ? availableIndices : MOTIVATIONAL_PHRASES.map((_, i) => i);
+
+      // Pick random phrase from candidates
+      const randomIndex = candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
+      const selectedPhrase = MOTIVATIONAL_PHRASES[randomIndex];
+
+      // Update recent phrases (keep last 5)
+      const updatedRecent = [randomIndex, ...recentIndices].slice(0, 5);
+      await AsyncStorage.setItem(RECENT_PHRASES_KEY, JSON.stringify(updatedRecent));
+
+      setMotivationalPhrase(selectedPhrase);
+      logWithTime('Motivational phrase loaded:', selectedPhrase);
+    } catch (error) {
+      console.error('Failed to load motivational phrase:', error);
+      // Fallback to a random phrase
+      setMotivationalPhrase(MOTIVATIONAL_PHRASES[Math.floor(Math.random() * MOTIVATIONAL_PHRASES.length)]);
+    }
+  };
 
   useEffect(() => {
     loadSavedEntries();
@@ -356,8 +410,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       <ExpoStatusBar style="auto" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>How are they doing?</Text>
-        <Text style={styles.subtitle}>staging version</Text>
+        <Text style={styles.title}>{motivationalPhrase}</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -789,13 +842,6 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     textAlign: 'center',
     fontFamily: 'System',
-  },
-  subtitle: {
-    fontSize: 11,
-    color: '#6c757d',
-    textAlign: 'center',
-    marginTop: 4,
-    fontStyle: 'italic',
   },
   content: {
     flex: 1,

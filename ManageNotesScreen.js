@@ -207,9 +207,9 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     }
   };
 
-  // Check if food matches ladder and get attempt count
-  const getFoodLadderInfo = (foodName) => {
-    logWithTime('[Ladder] Checking food:', foodName);
+  // Check if food matches ladder and get attempt count FOR THIS SPECIFIC ENTRY
+  const getFoodLadderInfo = (foodName, currentEntry) => {
+    logWithTime('[Ladder] Checking food:', foodName, 'for entry:', currentEntry.id);
 
     // Return null if no active ladder
     if (!ladderStepFoods || !ladderProgress?.stepStartDate) {
@@ -231,19 +231,28 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       return null;
     }
 
-    // Count attempts for this food since step start
-    const attemptCount = LadderService.countFoodAttempts(
+    // Count attempts BEFORE this entry (entries that are earlier in time)
+    const currentEntryDate = new Date(currentEntry.timestamp);
+    const entriesBeforeThis = savedEntries.filter(entry => {
+      const entryDate = new Date(entry.timestamp);
+      return entryDate < currentEntryDate;
+    });
+
+    const previousAttempts = LadderService.countFoodAttempts(
       matchedStepFood,
-      savedEntries,
+      entriesBeforeThis,
       ladderProgress.stepStartDate
     );
 
-    logWithTime('[Ladder] Attempt count:', { matchedStepFood, attemptCount });
+    // This entry is attempt number (previousAttempts + 1)
+    const attemptNumber = previousAttempts + 1;
+
+    logWithTime('[Ladder] Attempt count for this entry:', { matchedStepFood, attemptNumber, previousAttempts });
 
     return {
       matched: true,
-      attemptCount,
-      ordinal: LadderService.getOrdinal(attemptCount)
+      attemptCount: attemptNumber,
+      ordinal: LadderService.getOrdinal(attemptNumber)
     };
   };
 
@@ -552,7 +561,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                       <View style={styles.extractedDataSection}>
                         <Text style={styles.extractedDataTitle}>🍎 Foods:</Text>
                         {entry.foods.map((food, index) => {
-                          const ladderInfo = getFoodLadderInfo(food.name);
+                          const ladderInfo = getFoodLadderInfo(food.name, entry);
                           return (
                             <Text key={index} style={styles.extractedDataItem}>
                               • {ladderInfo?.matched ? (

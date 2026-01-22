@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import StorageService from './StorageService';
+import LadderService from './LadderService';
+import { MILK_LADDER, EGG_LADDER } from './LadderData';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -95,6 +97,39 @@ class AISummaryService {
   }
 
   /**
+   * Get ladder context for summary generation
+   * @returns {Promise<Object|null>} Ladder context or null if no active ladder
+   */
+  async getLadderContext() {
+    try {
+      const progress = await LadderService.getLadderProgress();
+
+      if (!progress.activeLadder || !progress.currentStep) {
+        return null;
+      }
+
+      // Get the appropriate ladder data
+      const ladder = progress.activeLadder === 'milk' ? MILK_LADDER : EGG_LADDER;
+      const stepData = ladder.find(step => step.step === progress.currentStep);
+
+      if (!stepData) {
+        return null;
+      }
+
+      return {
+        active_ladder: progress.activeLadder,
+        current_step: progress.currentStep,
+        step_name: stepData.name,
+        step_foods: stepData.foods,
+        step_start_date: progress.stepStartDate
+      };
+    } catch (error) {
+      console.error('Failed to get ladder context:', error);
+      return null;
+    }
+  }
+
+  /**
    * Generate AI summary by calling webhook
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Summary response
@@ -116,16 +151,26 @@ class AISummaryService {
         throw new Error('No entries found to generate summary');
       }
 
+      // Get ladder context
+      const ladderContext = await this.getLadderContext();
+
       // Format payload
       const payload = {
         user_id: userId,
         entries: this.formatEntriesForPayload(entries),
-        date_range: 'all'
+        date_range: 'all',
+        ladder_context: ladderContext
       };
 
       logWithTime('📤 Sending to webhook:', {
         url: webhookUrl,
-        entry_count: entries.length
+        entry_count: entries.length,
+        has_ladder_context: !!ladderContext,
+        ladder_info: ladderContext ? {
+          ladder: ladderContext.active_ladder,
+          step: ladderContext.current_step,
+          step_name: ladderContext.step_name
+        } : null
       });
 
       // Call webhook with timeout

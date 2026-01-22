@@ -7,12 +7,15 @@ import {
   SafeAreaView,
   Alert,
   ScrollView,
-  Platform
+  Platform,
+  Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
+import LadderService from './LadderService';
+import LadderOnboardingScreen from './LadderOnboardingScreen';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -23,13 +26,22 @@ export default function SettingsScreen({ onClose }) {
   const { user, signOut } = useAuth();
   const posthog = usePostHog();
   const [isWorking, setIsWorking] = useState(false);
+  const [ladderProgress, setLadderProgress] = useState(null);
+  const [showLadderOnboarding, setShowLadderOnboarding] = useState(false);
 
   // Track screen view on mount
   useEffect(() => {
     if (posthog?.screen) {
       posthog.screen('SettingsScreen');
     }
+    loadLadderProgress();
   }, [posthog]);
+
+  // Load ladder progress
+  const loadLadderProgress = async () => {
+    const progress = await LadderService.getFormattedProgress();
+    setLadderProgress(progress);
+  };
 
   const exportData = async () => {
     try {
@@ -154,6 +166,34 @@ export default function SettingsScreen({ onClose }) {
     );
   };
 
+  const handleChangeLadder = () => {
+    setShowLadderOnboarding(true);
+  };
+
+  const handleResetLadder = () => {
+    Alert.alert(
+      'Reset Ladder',
+      'This will clear your current ladder progress. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await LadderService.resetLadder();
+            await loadLadderProgress();
+            Alert.alert('Done', 'Ladder progress has been reset.');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleLadderOnboardingComplete = async () => {
+    setShowLadderOnboarding(false);
+    await loadLadderProgress();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -165,6 +205,34 @@ export default function SettingsScreen({ onClose }) {
       </View>
       
       <ScrollView contentContainerStyle={styles.content}>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ladder Progress</Text>
+          {ladderProgress?.ladderName ? (
+            <>
+              <Text style={styles.infoText}>Current ladder: {ladderProgress.ladderName}</Text>
+              <Text style={styles.infoText}>Current step: {ladderProgress.stepInfo}</Text>
+              {ladderProgress.daysOnStep !== null && (
+                <Text style={styles.infoText}>
+                  Days on this step: {ladderProgress.daysOnStep}
+                </Text>
+              )}
+              <TouchableOpacity style={styles.primaryButton} onPress={handleChangeLadder} accessibilityLabel="Change ladder step">
+                <Text style={styles.primaryButtonText}>Change Ladder Step</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButton} onPress={handleResetLadder} accessibilityLabel="Reset ladder">
+                <Text style={styles.secondaryButtonText}>Reset Ladder</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.infoText}>No ladder selected</Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleChangeLadder} accessibilityLabel="Set up ladder">
+                <Text style={styles.primaryButtonText}>Set Up Ladder</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -196,6 +264,16 @@ export default function SettingsScreen({ onClose }) {
         </View>
 
       </ScrollView>
+
+      {/* Ladder Onboarding Modal */}
+      <Modal
+        visible={showLadderOnboarding}
+        animationType="none"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowLadderOnboarding(false)}
+      >
+        <LadderOnboardingScreen onComplete={handleLadderOnboardingComplete} />
+      </Modal>
     </SafeAreaView>
   );
 }

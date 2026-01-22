@@ -24,14 +24,16 @@ if (Platform.OS === 'web') {
 }
 
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { AuthProvider, useAuth } from './AuthContext';
 import LoginScreen from './LoginScreen';
 import SettingsScreen from './SettingsScreen';
 import ManageNotesScreen from './ManageNotesScreen';
 import AddNotesScreen from './AddNotesScreen';
+import LadderOnboardingScreen from './LadderOnboardingScreen';
 import BackgroundProcessingService from './BackgroundProcessingService';
+import LadderService from './LadderService';
 import Constants from 'expo-constants';
 
 const logWithTime = (message, ...args) => {
@@ -135,6 +137,8 @@ function AppContent() {
   const { session, loading } = useAuth();
   const posthog = usePostHog();
   const [currentScreen, setCurrentScreen] = useState('manage'); // 'manage' | 'add' | 'settings'
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   // Track app opened on mount
   useEffect(() => {
@@ -148,6 +152,20 @@ function AppContent() {
       });
     }
   }, [posthog]);
+
+  // Check if onboarding is needed
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (session) {
+        const completed = await LadderService.hasCompletedOnboarding();
+        logWithTime('Onboarding check:', { completed });
+        setShowOnboarding(!completed);
+        setCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboarding();
+  }, [session]);
 
   useEffect(() => {
     // Initialize background processing service
@@ -169,8 +187,13 @@ function AppContent() {
     setCurrentScreen('settings');
   };
 
+  const handleOnboardingComplete = () => {
+    logWithTime('Onboarding completed');
+    setShowOnboarding(false);
+  };
+
   // Show loading screen while checking auth state
-  if (loading) {
+  if (loading || checkingOnboarding) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF986F" />
@@ -182,6 +205,11 @@ function AppContent() {
   // Show login screen if not authenticated
   if (!session) {
     return <LoginScreen />;
+  }
+
+  // Show onboarding if needed
+  if (showOnboarding) {
+    return <LadderOnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
   // Show appropriate screen based on navigation state

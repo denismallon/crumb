@@ -320,7 +320,6 @@ class LadderService {
     return `${num}th`;
   }
 }
-}
 
 // Export singleton instance
 export default LadderService.getInstance();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -207,53 +207,69 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
     }
   };
 
-  // Check if food matches ladder and get attempt count FOR THIS SPECIFIC ENTRY
-  const getFoodLadderInfo = (foodName, currentEntry) => {
-    logWithTime('[Ladder] Checking food:', foodName, 'for entry:', currentEntry.id);
-
-    // Return null if no active ladder
+  // Memoize ladder info calculation for all entries
+  // This calculates once when savedEntries, ladderStepFoods, or ladderProgress changes
+  // Instead of recalculating on every render (every 4 seconds)
+  const entryLadderInfo = useMemo(() => {
     if (!ladderStepFoods || !ladderProgress?.stepStartDate) {
-      logWithTime('[Ladder] No active ladder or step start date', {
-        hasStepFoods: !!ladderStepFoods,
-        hasStepStartDate: !!ladderProgress?.stepStartDate,
-        ladderProgress
+      return new Map(); // Return empty map if no active ladder
+    }
+
+    logWithTime('[Ladder] Calculating ladder info for all entries');
+
+    const ladderInfoMap = new Map();
+
+    // For each entry, calculate ladder info for each food
+    savedEntries.forEach((entry) => {
+      if (!entry.foods || entry.foods.length === 0) return;
+
+      const entryFoodInfo = new Map();
+
+      entry.foods.forEach((food) => {
+        // Check if food matches current step
+        const matchedStepFood = LadderService.matchesFoodInStep(food.name, ladderStepFoods);
+
+        if (!matchedStepFood) {
+          entryFoodInfo.set(food.name, null);
+          return;
+        }
+
+        // Count attempts BEFORE this entry (entries that are earlier in time)
+        const currentEntryDate = new Date(entry.timestamp);
+        const entriesBeforeThis = savedEntries.filter(e => {
+          const entryDate = new Date(e.timestamp);
+          return entryDate < currentEntryDate;
+        });
+
+        const previousAttempts = LadderService.countFoodAttempts(
+          matchedStepFood,
+          entriesBeforeThis,
+          ladderProgress.stepStartDate
+        );
+
+        // This entry is attempt number (previousAttempts + 1)
+        const attemptNumber = previousAttempts + 1;
+
+        entryFoodInfo.set(food.name, {
+          matched: true,
+          attemptCount: attemptNumber,
+          ordinal: LadderService.getOrdinal(attemptNumber)
+        });
       });
-      return null;
-    }
 
-    logWithTime('[Ladder] Current step foods:', ladderStepFoods);
-
-    // Check if food matches current step
-    const matchedStepFood = LadderService.matchesFoodInStep(foodName, ladderStepFoods);
-    logWithTime('[Ladder] Match result:', { foodName, matchedStepFood });
-
-    if (!matchedStepFood) {
-      return null;
-    }
-
-    // Count attempts BEFORE this entry (entries that are earlier in time)
-    const currentEntryDate = new Date(currentEntry.timestamp);
-    const entriesBeforeThis = savedEntries.filter(entry => {
-      const entryDate = new Date(entry.timestamp);
-      return entryDate < currentEntryDate;
+      ladderInfoMap.set(entry.id, entryFoodInfo);
     });
 
-    const previousAttempts = LadderService.countFoodAttempts(
-      matchedStepFood,
-      entriesBeforeThis,
-      ladderProgress.stepStartDate
-    );
+    logWithTime('[Ladder] Ladder info calculated for', savedEntries.length, 'entries');
 
-    // This entry is attempt number (previousAttempts + 1)
-    const attemptNumber = previousAttempts + 1;
+    return ladderInfoMap;
+  }, [savedEntries, ladderStepFoods, ladderProgress]);
 
-    logWithTime('[Ladder] Attempt count for this entry:', { matchedStepFood, attemptNumber, previousAttempts });
-
-    return {
-      matched: true,
-      attemptCount: attemptNumber,
-      ordinal: LadderService.getOrdinal(attemptNumber)
-    };
+  // Helper function to get ladder info for a specific food in an entry
+  const getFoodLadderInfo = (foodName, currentEntry) => {
+    const entryInfo = entryLadderInfo.get(currentEntry.id);
+    if (!entryInfo) return null;
+    return entryInfo.get(foodName) || null;
   };
 
   // Load and rotate motivational phrase

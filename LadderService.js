@@ -230,27 +230,20 @@ class LadderService {
    */
   matchesFoodInStep(extractedFoodName, stepFoods) {
     if (!extractedFoodName || !stepFoods) {
-      logWithTime('[LadderService] matchesFoodInStep early return:', {
-        hasExtractedFood: !!extractedFoodName,
-        hasStepFoods: !!stepFoods
-      });
       return null;
     }
 
     const extractedLower = extractedFoodName.toLowerCase().trim();
-    logWithTime('[LadderService] Matching:', extractedLower, 'against', stepFoods.length, 'step foods');
 
     for (const stepFood of stepFoods) {
       const stepFoodLower = stepFood.toLowerCase().trim();
 
       // Check if extracted food contains step food or vice versa
       if (extractedLower.includes(stepFoodLower) || stepFoodLower.includes(extractedLower)) {
-        logWithTime('[LadderService] ✅ MATCH FOUND:', extractedFoodName, '<=>', stepFood);
         return stepFood;
       }
     }
 
-    logWithTime('[LadderService] ❌ No match for:', extractedFoodName);
     return null;
   }
 
@@ -263,19 +256,11 @@ class LadderService {
    */
   countFoodAttempts(foodName, allEntries, stepStartDate) {
     if (!foodName || !allEntries || !stepStartDate) {
-      logWithTime('[LadderService] countFoodAttempts early return:', {
-        hasFoodName: !!foodName,
-        hasEntries: !!allEntries,
-        hasStepStartDate: !!stepStartDate
-      });
       return 0;
     }
 
     const startDate = new Date(stepStartDate);
     const foodLower = foodName.toLowerCase().trim();
-
-    logWithTime('[LadderService] Counting attempts for:', foodName, 'since:', stepStartDate);
-    logWithTime('[LadderService] Total entries to check:', allEntries.length);
 
     let count = 0;
 
@@ -295,12 +280,10 @@ class LadderService {
 
         if (hasFood) {
           count++;
-          logWithTime('[LadderService] Found attempt in entry:', entry.id, 'timestamp:', entry.timestamp);
         }
       }
     }
 
-    logWithTime('[LadderService] Total attempts found:', count);
     return count;
   }
 

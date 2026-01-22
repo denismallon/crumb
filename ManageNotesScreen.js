@@ -203,7 +203,7 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       setLadderStepFoods(stepFoods);
       logWithTime('Ladder data loaded:', { progress, stepFoods });
     } catch (error) {
-      console.error('Failed loading ladder data:', error);
+      console.error('Failed loaded ladder data:', error);
     }
   };
 

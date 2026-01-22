@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MILK_LADDER, EGG_LADDER } from './LadderData';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -198,6 +199,127 @@ class LadderService {
       };
     }
   }
+
+  /**
+   * Get foods for current ladder step
+   * @returns {Promise<string[]|null>} Array of food names or null if no active ladder
+   */
+  async getCurrentStepFoods() {
+    try {
+      const progress = await this.getLadderProgress();
+
+      if (!progress.activeLadder || !progress.currentStep) {
+        return null;
+      }
+
+      const ladder = progress.activeLadder === 'milk' ? MILK_LADDER : EGG_LADDER;
+      const stepData = ladder.find(step => step.step === progress.currentStep);
+
+      return stepData ? stepData.foods : null;
+    } catch (error) {
+      console.error('Failed to get current step foods:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if extracted food matches any food in current step (case-insensitive substring)
+   * @param {string} extractedFoodName - Food name from note
+   * @param {string[]} stepFoods - Foods in current ladder step
+   * @returns {string|null} Matched step food name or null
+   */
+  matchesFoodInStep(extractedFoodName, stepFoods) {
+    if (!extractedFoodName || !stepFoods) {
+      logWithTime('[LadderService] matchesFoodInStep early return:', {
+        hasExtractedFood: !!extractedFoodName,
+        hasStepFoods: !!stepFoods
+      });
+      return null;
+    }
+
+    const extractedLower = extractedFoodName.toLowerCase().trim();
+    logWithTime('[LadderService] Matching:', extractedLower, 'against', stepFoods.length, 'step foods');
+
+    for (const stepFood of stepFoods) {
+      const stepFoodLower = stepFood.toLowerCase().trim();
+
+      // Check if extracted food contains step food or vice versa
+      if (extractedLower.includes(stepFoodLower) || stepFoodLower.includes(extractedLower)) {
+        logWithTime('[LadderService] ✅ MATCH FOUND:', extractedFoodName, '<=>', stepFood);
+        return stepFood;
+      }
+    }
+
+    logWithTime('[LadderService] ❌ No match for:', extractedFoodName);
+    return null;
+  }
+
+  /**
+   * Count attempts for a specific food since step start date
+   * @param {string} foodName - Food to count attempts for
+   * @param {Array} allEntries - All saved entries
+   * @param {string} stepStartDate - ISO date string
+   * @returns {number} Number of attempts
+   */
+  countFoodAttempts(foodName, allEntries, stepStartDate) {
+    if (!foodName || !allEntries || !stepStartDate) {
+      logWithTime('[LadderService] countFoodAttempts early return:', {
+        hasFoodName: !!foodName,
+        hasEntries: !!allEntries,
+        hasStepStartDate: !!stepStartDate
+      });
+      return 0;
+    }
+
+    const startDate = new Date(stepStartDate);
+    const foodLower = foodName.toLowerCase().trim();
+
+    logWithTime('[LadderService] Counting attempts for:', foodName, 'since:', stepStartDate);
+    logWithTime('[LadderService] Total entries to check:', allEntries.length);
+
+    let count = 0;
+
+    for (const entry of allEntries) {
+      // Skip if entry is before step start date
+      if (entry.timestamp) {
+        const entryDate = new Date(entry.timestamp);
+        if (entryDate < startDate) continue;
+      }
+
+      // Check if this entry contains the food
+      if (entry.foods && Array.isArray(entry.foods)) {
+        const hasFood = entry.foods.some(foodObj => {
+          const extractedLower = foodObj.name.toLowerCase().trim();
+          return extractedLower.includes(foodLower) || foodLower.includes(extractedLower);
+        });
+
+        if (hasFood) {
+          count++;
+          logWithTime('[LadderService] Found attempt in entry:', entry.id, 'timestamp:', entry.timestamp);
+        }
+      }
+    }
+
+    logWithTime('[LadderService] Total attempts found:', count);
+    return count;
+  }
+
+  /**
+   * Convert number to ordinal (1st, 2nd, 3rd, etc.)
+   * @param {number} num - Number to convert
+   * @returns {string} Ordinal string
+   */
+  getOrdinal(num) {
+    const j = num % 10;
+    const k = num % 100;
+
+    if (j === 1 && k !== 11) return `${num}st`;
+    if (j === 2 && k !== 12) return `${num}nd`;
+    if (j === 3 && k !== 13) return `${num}rd`;
+
+    return `${num}th`;
+  }
+}
 }
 
 // Export singleton instance

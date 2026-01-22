@@ -20,6 +20,7 @@ import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import NoteSaveEvents, { NOTE_SAVE_EVENT_TYPES } from './NoteSaveEvents';
 import AISummaryScreen from './AISummaryScreen';
+import LadderService from './LadderService';
 
 // Motivational phrases to rotate
 const MOTIVATIONAL_PHRASES = [
@@ -181,6 +182,8 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const [editingItemData, setEditingItemData] = useState(null);
   const [optimisticNotes, setOptimisticNotes] = useState([]);
   const [motivationalPhrase, setMotivationalPhrase] = useState('Every note helps');
+  const [ladderStepFoods, setLadderStepFoods] = useState(null);
+  const [ladderProgress, setLadderProgress] = useState(null);
 
   // Track screen view on mount and load motivational phrase
   useEffect(() => {
@@ -188,7 +191,61 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
       posthog.screen('ManageNotesScreen');
     }
     loadMotivationalPhrase();
+    loadLadderData();
   }, [posthog]);
+
+  // Load ladder progress and current step foods
+  const loadLadderData = async () => {
+    try {
+      const progress = await LadderService.getLadderProgress();
+      const stepFoods = await LadderService.getCurrentStepFoods();
+      setLadderProgress(progress);
+      setLadderStepFoods(stepFoods);
+      logWithTime('Ladder data loaded:', { progress, stepFoods });
+    } catch (error) {
+      console.error('Failed to load ladder data:', error);
+    }
+  };
+
+  // Check if food matches ladder and get attempt count
+  const getFoodLadderInfo = (foodName) => {
+    logWithTime('[Ladder] Checking food:', foodName);
+
+    // Return null if no active ladder
+    if (!ladderStepFoods || !ladderProgress?.stepStartDate) {
+      logWithTime('[Ladder] No active ladder or step start date', {
+        hasStepFoods: !!ladderStepFoods,
+        hasStepStartDate: !!ladderProgress?.stepStartDate,
+        ladderProgress
+      });
+      return null;
+    }
+
+    logWithTime('[Ladder] Current step foods:', ladderStepFoods);
+
+    // Check if food matches current step
+    const matchedStepFood = LadderService.matchesFoodInStep(foodName, ladderStepFoods);
+    logWithTime('[Ladder] Match result:', { foodName, matchedStepFood });
+
+    if (!matchedStepFood) {
+      return null;
+    }
+
+    // Count attempts for this food since step start
+    const attemptCount = LadderService.countFoodAttempts(
+      matchedStepFood,
+      savedEntries,
+      ladderProgress.stepStartDate
+    );
+
+    logWithTime('[Ladder] Attempt count:', { matchedStepFood, attemptCount });
+
+    return {
+      matched: true,
+      attemptCount,
+      ordinal: LadderService.getOrdinal(attemptCount)
+    };
+  };
 
   // Load and rotate motivational phrase
   const loadMotivationalPhrase = async () => {
@@ -494,11 +551,22 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
                     {entry.foods && entry.foods.length > 0 && (
                       <View style={styles.extractedDataSection}>
                         <Text style={styles.extractedDataTitle}>🍎 Foods:</Text>
-                        {entry.foods.map((food, index) => (
-                          <Text key={index} style={styles.extractedDataItem}>
-                            • {food.name} ({food.mealType}){food.quantity ? ` - ${food.quantity}` : ''}
-                          </Text>
-                        ))}
+                        {entry.foods.map((food, index) => {
+                          const ladderInfo = getFoodLadderInfo(food.name);
+                          return (
+                            <Text key={index} style={styles.extractedDataItem}>
+                              • {ladderInfo?.matched ? (
+                                <>
+                                  <Text style={styles.highlightedFood}>{food.name}</Text>
+                                  <Text style={styles.attemptCount}> ({ladderInfo.ordinal} time)</Text>
+                                  <Text> ({food.mealType}){food.quantity ? ` - ${food.quantity}` : ''}</Text>
+                                </>
+                              ) : (
+                                <>{food.name} ({food.mealType}){food.quantity ? ` - ${food.quantity}` : ''}</>
+                              )}
+                            </Text>
+                          );
+                        })}
                       </View>
                     )}
                     
@@ -1031,6 +1099,14 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginBottom: 2,
     lineHeight: 16,
+  },
+  highlightedFood: {
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  attemptCount: {
+    fontWeight: 'bold',
+    color: '#28a745',
   },
   // removed diagnostics/notification styles
   // removed processing diagnostics styles

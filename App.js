@@ -161,6 +161,9 @@ function AppContent() {
         logWithTime('Onboarding check:', { completed });
         setShowOnboarding(!completed);
         setCheckingOnboarding(false);
+      } else {
+        // No session = no onboarding needed
+        setCheckingOnboarding(false);
       }
     };
 

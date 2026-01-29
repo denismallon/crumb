@@ -372,7 +372,27 @@ export default function ManageNotesScreen({ onAddNote, onOpenSettings }) {
   const refreshEntries = async () => {
     try {
       const currentEntries = await StorageService.getFoodLogs();
-      setSavedEntries(currentEntries);
+
+      // Only update savedEntries if data has actually changed
+      // This prevents unnecessary re-renders and useMemo recalculations
+      setSavedEntries((prev) => {
+        // If lengths differ, definitely changed
+        if (prev.length !== currentEntries.length) {
+          return currentEntries;
+        }
+
+        // Check if any entry IDs or timestamps changed
+        const hasChanged = currentEntries.some((entry, index) => {
+          const prevEntry = prev[index];
+          return !prevEntry ||
+                 prevEntry.id !== entry.id ||
+                 prevEntry.timestamp !== entry.timestamp ||
+                 JSON.stringify(prevEntry.foods) !== JSON.stringify(entry.foods);
+        });
+
+        return hasChanged ? currentEntries : prev;
+      });
+
       setOptimisticNotes((prev) => {
         if (!prev.length) return prev;
         const entryIds = new Set(currentEntries.map((entry) => entry.id));

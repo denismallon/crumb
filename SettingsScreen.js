@@ -52,7 +52,11 @@ export default function SettingsScreen({ onClose }) {
       const csvContent = await StorageService.exportAsCSV();
 
       if (!csvContent) {
-        Alert.alert('Export Error', 'No data to export.');
+        if (Platform.OS === 'web') {
+          window.alert('No data to export.');
+        } else {
+          Alert.alert('Export Error', 'No data to export.');
+        }
         return;
       }
 
@@ -66,7 +70,12 @@ export default function SettingsScreen({ onClose }) {
         const message = Platform.OS === 'web'
           ? 'CSV file has been downloaded.'
           : 'CSV file is ready to share.';
-        Alert.alert('Export Complete', message);
+
+        if (Platform.OS === 'web') {
+          window.alert(message);
+        } else {
+          Alert.alert('Export Complete', message);
+        }
 
         // Track export event
         if (posthog?.capture) {
@@ -76,11 +85,19 @@ export default function SettingsScreen({ onClose }) {
           });
         }
       } else {
-        Alert.alert('Export Error', 'Failed to export data.');
+        if (Platform.OS === 'web') {
+          window.alert('Failed to export data.');
+        } else {
+          Alert.alert('Export Error', 'Failed to export data.');
+        }
       }
     } catch (e) {
       console.error('Export error:', e);
-      Alert.alert('Export Error', 'An error occurred while exporting data.');
+      if (Platform.OS === 'web') {
+        window.alert('An error occurred while exporting data.');
+      } else {
+        Alert.alert('Export Error', 'An error occurred while exporting data.');
+      }
     } finally {
       setIsWorking(false);
     }
@@ -166,53 +183,68 @@ export default function SettingsScreen({ onClose }) {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsWorking(true);
-              await signOut();
-              // Navigation will be handled automatically by auth state change
-              logWithTime('Logged out successfully');
-            } catch (error) {
-              logWithTime('Logout error:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            } finally {
-              setIsWorking(false);
-            }
-          }
-        }
-      ]
-    );
+    // Web doesn't support Alert.alert, use window.confirm
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Are you sure you want to log out?')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Log Out',
+            'Are you sure you want to log out?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Log Out', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmed) return;
+
+    try {
+      setIsWorking(true);
+      logWithTime('Logging out...');
+      await signOut();
+      logWithTime('✅ Logged out successfully');
+    } catch (error) {
+      logWithTime('❌ Logout error:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to log out. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to log out. Please try again.');
+      }
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   const handleChangeLadder = () => {
     setShowLadderOnboarding(true);
   };
 
-  const handleResetLadder = () => {
-    Alert.alert(
-      'Reset Ladder',
-      'This will clear your current ladder progress. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await LadderService.resetLadder();
-            await loadLadderProgress();
-            Alert.alert('Done', 'Ladder progress has been reset.');
-          }
-        }
-      ]
-    );
+  const handleResetLadder = async () => {
+    // Web doesn't support Alert.alert, use window.confirm
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('This will clear your current ladder progress. Continue?')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Reset Ladder',
+            'This will clear your current ladder progress. Continue?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Reset', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmed) return;
+
+    await LadderService.resetLadder();
+    await loadLadderProgress();
+
+    if (Platform.OS === 'web') {
+      window.alert('Ladder progress has been reset.');
+    } else {
+      Alert.alert('Done', 'Ladder progress has been reset.');
+    }
   };
 
   const handleLadderOnboardingComplete = async () => {

@@ -207,6 +207,8 @@ export default function LoginScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       editable={!loading}
+                      returnKeyType="send"
+                      onSubmitEditing={handleSendCode}
                     />
                   </View>
 
@@ -294,7 +296,7 @@ export default function LoginScreen() {
             <View style={styles.footer}>
               <Text style={styles.privacyText}>🔒 We never share your health data</Text>
               <TouchableOpacity
-                onPress={() => Linking.openURL('https://www.heycrumb.io/privacy')}
+                onPress={() => Linking.openURL('https://www.heycrumb.io/#privacy')}
               >
                 <Text style={styles.privacyLink}>Read our Privacy Policy</Text>
               </TouchableOpacity>

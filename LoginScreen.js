@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './supabase';
-import { posthog, usePostHog } from 'posthog-react-native';
+import { usePostHog } from 'posthog-react-native';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -22,7 +22,7 @@ const logWithTime = (message, ...args) => {
 };
 
 export default function LoginScreen() {
-  const posthogHook = usePostHog();
+  const posthog = usePostHog();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -117,24 +117,37 @@ export default function LoginScreen() {
 
       // Identify user and track login event in PostHog
       if (data.session.user) {
+        logWithTime('[PostHog] Starting PostHog identify flow for user:', data.session.user.id);
+        logWithTime('[PostHog] posthog object exists?', !!posthog);
+        logWithTime('[PostHog] posthog.identify exists?', !!posthog?.identify);
+        logWithTime('[PostHog] posthog.capture exists?', !!posthog?.capture);
+
         try {
           if (posthog?.identify && typeof posthog.identify === 'function') {
+            logWithTime('[PostHog] Calling posthog.identify...');
             posthog.identify(data.session.user.id, {
               email: data.session.user.email
             });
             logWithTime('✅ User identified in PostHog:', data.session.user.id);
+          } else {
+            logWithTime('⚠️ PostHog identify not available');
           }
 
           if (posthog?.capture) {
+            logWithTime('[PostHog] Calling posthog.capture...');
             posthog.capture('user_logged_in', {
               screen: 'LoginScreen',
               method: 'email_otp'
             });
             logWithTime('✅ user_logged_in event tracked');
+          } else {
+            logWithTime('⚠️ PostHog capture not available');
           }
         } catch (error) {
-          // Silently fail if PostHog is not initialized yet
+          logWithTime('❌ PostHog error:', error);
         }
+      } else {
+        logWithTime('⚠️ No user in session data');
       }
 
       // Session is automatically stored and managed by Supabase

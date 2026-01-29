@@ -143,15 +143,19 @@ function AppContent() {
   // Track app opened on mount
   useEffect(() => {
     logWithTime(`App boot sequence started (${BOOT_LOG_ID})`);
+  }, []);
 
-    // Track app opened event
-    if (posthog?.capture) {
+  // Track app opened event AFTER user is identified
+  useEffect(() => {
+    if (session && posthog?.capture) {
       posthog.capture('app_opened', {
         screen: 'App',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        user_id: session.user.id
       });
+      logWithTime('✅ app_opened event captured for identified user:', session.user.id);
     }
-  }, [posthog]);
+  }, [session, posthog]);
 
   // Check if onboarding is needed
   useEffect(() => {

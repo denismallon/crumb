@@ -16,6 +16,7 @@ import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import LadderService from './LadderService';
 import LadderOnboardingScreen from './LadderOnboardingScreen';
+import FileExportHelper from './FileExportHelper';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -46,15 +47,40 @@ export default function SettingsScreen({ onClose }) {
   const exportData = async () => {
     try {
       setIsWorking(true);
-      const data = await StorageService.exportAllData();
-      if (data) {
-        logWithTime('Exported data:', data);
-        Alert.alert('Export Complete', 'Data exported to console.');
+
+      // Generate CSV from food logs
+      const csvContent = await StorageService.exportAsCSV();
+
+      if (!csvContent) {
+        Alert.alert('Export Error', 'No data to export.');
+        return;
+      }
+
+      // Generate filename with current date
+      const filename = FileExportHelper.generateFilename();
+
+      // Export file (downloads on web, shares on mobile)
+      const success = await FileExportHelper.exportCSV(csvContent, filename);
+
+      if (success) {
+        const message = Platform.OS === 'web'
+          ? 'CSV file has been downloaded.'
+          : 'CSV file is ready to share.';
+        Alert.alert('Export Complete', message);
+
+        // Track export event
+        if (posthog?.capture) {
+          posthog.capture('data_exported', {
+            format: 'csv',
+            platform: Platform.OS
+          });
+        }
       } else {
         Alert.alert('Export Error', 'Failed to export data.');
       }
     } catch (e) {
-      Alert.alert('Export Error', 'An error occurred.');
+      console.error('Export error:', e);
+      Alert.alert('Export Error', 'An error occurred while exporting data.');
     } finally {
       setIsWorking(false);
     }
@@ -256,11 +282,6 @@ export default function SettingsScreen({ onClose }) {
           <Text style={styles.sectionTitle}>App Information</Text>
           <Text style={styles.infoText}>Version: 1.0.0</Text>
           <Text style={styles.infoText}>About: Crumb helps track foods and reactions.</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Coming Soon</Text>
-          <Text style={styles.infoText}>Notifications, child profiles, and more.</Text>
         </View>
 
       </ScrollView>

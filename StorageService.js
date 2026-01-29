@@ -345,7 +345,7 @@ class StorageService {
     try {
       const logs = await this.getFoodLogs();
       const metadata = await this.getMetadata();
-      
+
       const exportData = {
         exportDate: new Date().toISOString(),
         version: metadata.version,
@@ -357,6 +357,87 @@ class StorageService {
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
       console.error('Failed to export data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Convert food logs to CSV format
+   * Each food is a separate row with date, time, food details, and reactions
+   * @returns {Promise<string>} CSV string
+   */
+  async exportAsCSV() {
+    try {
+      const logs = await this.getFoodLogs();
+
+      if (!logs || logs.length === 0) {
+        return null;
+      }
+
+      // CSV header
+      const headers = ['Date', 'Time', 'Food', 'Meal Type', 'Quantity', 'Reactions', 'Transcription'];
+      let csv = headers.join(',') + '\n';
+
+      // Sort logs by timestamp (newest first)
+      const sortedLogs = [...logs].sort((a, b) =>
+        new Date(b.timestamp) - new Date(a.timestamp)
+      );
+
+      // Convert each entry to CSV rows
+      for (const entry of sortedLogs) {
+        const date = new Date(entry.timestamp);
+        const dateStr = date.toLocaleDateString('en-GB'); // DD/MM/YYYY
+        const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); // HH:MM
+
+        // Format reactions if any
+        let reactionsStr = '';
+        if (entry.reactions && entry.reactions.length > 0) {
+          reactionsStr = entry.reactions.map(r =>
+            `${r.type || 'unknown'} (${r.severity || 'unknown'}): ${r.description || ''}`
+          ).join('; ');
+        }
+
+        // Escape and format transcription text
+        const transcription = (entry.text || '').replace(/"/g, '""'); // Escape quotes
+
+        // If entry has foods, create a row for each food
+        if (entry.foods && entry.foods.length > 0) {
+          for (const food of entry.foods) {
+            const foodName = (food.name || '').replace(/"/g, '""');
+            const mealType = food.mealType || '';
+            const quantity = (food.quantity || '').replace(/"/g, '""');
+
+            const row = [
+              dateStr,
+              timeStr,
+              `"${foodName}"`,
+              mealType,
+              `"${quantity}"`,
+              `"${reactionsStr}"`,
+              `"${transcription}"`
+            ].join(',');
+
+            csv += row + '\n';
+          }
+        } else {
+          // Entry with no foods - still include it with transcription
+          const row = [
+            dateStr,
+            timeStr,
+            '""',
+            '""',
+            '""',
+            `"${reactionsStr}"`,
+            `"${transcription}"`
+          ].join(',');
+
+          csv += row + '\n';
+        }
+      }
+
+      return csv;
+    } catch (error) {
+      console.error('Failed to export as CSV:', error);
       return null;
     }
   }

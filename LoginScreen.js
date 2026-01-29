@@ -32,10 +32,10 @@ export default function LoginScreen() {
 
   // Track screen view on mount
   useEffect(() => {
-    if (posthogHook?.screen) {
-      posthogHook.screen('LoginScreen');
+    if (posthog?.screen) {
+      posthog.screen('LoginScreen');
     }
-  }, [posthogHook]);
+  }, [posthog]);
 
   const handleSendCode = async () => {
     if (!email.trim()) {

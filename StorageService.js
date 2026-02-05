@@ -129,7 +129,7 @@ class StorageService {
       }
     }
 
-    if (!['voice', 'manual'].includes(entry.source)) {
+    if (!['voice', 'manual', 'import'].includes(entry.source)) {
       console.error('Invalid source type:', entry.source);
       return false;
     }

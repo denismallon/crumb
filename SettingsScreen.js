@@ -11,12 +11,15 @@ import {
   Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { useAuth } from './AuthContext';
 import { usePostHog } from 'posthog-react-native';
 import StorageService from './StorageService';
 import LadderService from './LadderService';
 import LadderOnboardingScreen from './LadderOnboardingScreen';
 import FileExportHelper from './FileExportHelper';
+import CSVImportService from './CSVImportService';
 
 const logWithTime = (message, ...args) => {
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
@@ -98,6 +101,128 @@ export default function SettingsScreen({ onClose }) {
       } else {
         Alert.alert('Export Error', 'An error occurred while exporting data.');
       }
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  /**
+   * Read file content from a document picker result
+   * Web returns a blob URI; native returns a file:// URI
+   */
+  const readFileContent = async (uri) => {
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      return await response.text();
+    } else {
+      return await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
+    }
+  };
+
+  /**
+   * Show a confirmation/alert that works on both web and native
+   */
+  const showAlert = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(message);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const importData = async () => {
+    try {
+      setIsWorking(true);
+      logWithTime('[Import] Opening file picker...');
+
+      // Open document picker filtered to CSV
+      const result = await DocumentPicker.getDocumentAsync({
+        type: Platform.OS === 'web' ? '*/*' : 'text/*',
+        copyToCacheDirectory: true
+      });
+
+      // User cancelled
+      if (result.canceled) {
+        logWithTime('[Import] File picker cancelled');
+        return;
+      }
+
+      const file = result.assets?.[0];
+      if (!file?.uri) {
+        logWithTime('[Import] No file URI returned');
+        showAlert('Import Error', 'Sorry, there was a problem with that data file');
+        return;
+      }
+
+      logWithTime('[Import] File selected:', { name: file.name, uri: file.uri, mimeType: file.mimeType });
+
+      // Read file content
+      const csvContent = await readFileContent(file.uri);
+      logWithTime('[Import] File read, length:', csvContent.length);
+
+      // Get preview (validates columns, counts rows, checks duplicates)
+      const preview = await CSVImportService.getImportPreview(csvContent);
+      logWithTime('[Import] Preview result:', preview);
+
+      if (!preview.valid) {
+        logWithTime('[Import] Invalid file:', preview.error);
+        showAlert('Import Error', 'Sorry, there was a problem with that data file');
+        return;
+      }
+
+      // Show confirmation dialog
+      const message = `Import ${preview.noteCount} note${preview.noteCount !== 1 ? 's' : ''} from this file? `
+        + `They'll be merged with your existing ${preview.existingCount} note${preview.existingCount !== 1 ? 's' : ''}. `
+        + `This can't be undone.`
+        + (preview.duplicateCount > 0 ? `\n\n(${preview.duplicateCount} duplicate${preview.duplicateCount !== 1 ? 's' : ''} will be skipped)` : '');
+
+      const confirmed = Platform.OS === 'web'
+        ? window.confirm(message)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              'Import Data',
+              message,
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Import', onPress: () => resolve(true) }
+              ]
+            );
+          });
+
+      if (!confirmed) {
+        logWithTime('[Import] User cancelled import');
+        return;
+      }
+
+      // Run the actual import
+      logWithTime('[Import] Running import...');
+      const importResult = await CSVImportService.importCSV(csvContent, user?.id);
+      logWithTime('[Import] Import result:', importResult);
+
+      if (importResult.success) {
+        showAlert(
+          'Import Complete',
+          `Successfully imported ${importResult.importedCount} note${importResult.importedCount !== 1 ? 's' : ''}.`
+        );
+
+        // Track import event
+        if (posthog?.capture) {
+          posthog.capture('data_imported', {
+            format: 'csv',
+            platform: Platform.OS,
+            importedCount: importResult.importedCount,
+            skippedDuplicates: importResult.skippedDuplicates,
+            totalRows: importResult.totalRows
+          });
+        }
+      } else {
+        logWithTime('[Import] ❌ Import failed:', importResult);
+        showAlert('Import Error', 'Sorry, there was a problem with that data file');
+      }
+    } catch (error) {
+      logWithTime('[Import] ❌ Unexpected error:', error);
+      console.error('Import error:', error);
+      showAlert('Import Error', 'Sorry, there was a problem with that data file');
     } finally {
       setIsWorking(false);
     }
@@ -304,6 +429,9 @@ export default function SettingsScreen({ onClose }) {
           <Text style={styles.sectionTitle}>Data Management</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={exportData} disabled={isWorking} accessibilityLabel="Export data">
             <Text style={styles.primaryButtonText}>Export Data</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.primaryButton} onPress={importData} disabled={isWorking} accessibilityLabel="Import data">
+            <Text style={styles.primaryButtonText}>Import Data</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.dangerButton} onPress={clearAllData} disabled={isWorking} accessibilityLabel="Clear all data">
             <Text style={styles.dangerButtonText}>Clear All Data</Text>
